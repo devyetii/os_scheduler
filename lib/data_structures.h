@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 /**
  * Enumerating process state
@@ -175,15 +176,19 @@ ushort FIFOQueue__isEmpty(FIFOQueue* fq) {
 //======= end FIFOQueue ===========================
 
 //======= begin PriorityQueue =========================
+static inline int parent(int i) { return i>>1; }
+static inline int leftChild(int i) { return (i<<1); }
+static inline int rightChild(int i) { return (i<<1)+1; }
+static inline ushort isLeaf(int idx, int sz) { return ((idx >= (sz>>1)) && idx <= sz); }
+
 typedef struct PriorityItem {
     void* val;
     int priority;
 } PriorityItem;
 
 void PriorityItem__swap(PriorityItem* pit1, PriorityItem* pit2) {
-    PriorityItem* pit_tmp = (PriorityItem*) malloc(sizeof(pit1));
-    memcpy(pit_tmp, pit1, sizeof(pit1));
-
+    PriorityItem* pit_tmp = (PriorityItem*) malloc(sizeof(PriorityItem));
+    memcpy(pit_tmp, pit1, sizeof(PriorityItem));
     pit1->val = pit2->val;
     pit1->priority = pit2->priority;
 
@@ -194,16 +199,86 @@ void PriorityItem__swap(PriorityItem* pit1, PriorityItem* pit2) {
 }
 
 typedef struct PriorityQueue {
-    PriorityQueue* heap;
+    struct PriorityItem** heap;
     int size;
 } PriorityQueue;
 
+void __maxHeapify(PriorityQueue* pq, int idx) {
+    if (isLeaf(idx, pq->size)) return;
+    // printf("\nAt size %d, node %d is not a leaf\n", pq->size, idx);
+
+    PriorityItem *cur = pq->heap[idx], *left = pq->heap[leftChild(idx)], *right = pq->heap[rightChild(idx)];
+    
+    if (
+        cur->priority < right->priority ||
+        cur->priority < left->priority
+    ) {
+        // Choose the greater for swapping
+        PriorityItem* grtr = right->priority > left->priority ? right : left;
+        int grtr_idx = right->priority > left->priority ? rightChild(idx) : leftChild(idx);
+        
+        // Swap and recurse
+        PriorityItem__swap(cur, grtr);
+        __maxHeapify(pq, grtr_idx);
+    }
+}
+
 PriorityQueue* PriorityQueue__create(int max_sz) {
     PriorityQueue* pq = (PriorityQueue*) malloc(sizeof(PriorityQueue));
-    pq->heap = (PriorityItem*) malloc(sizeof(PriorityItem) * max_sz);
+    pq->heap = (PriorityItem**) malloc(sizeof(PriorityItem*) * (max_sz + 5));
+    pq->heap[0] = (PriorityItem*) malloc(sizeof(PriorityItem));
+    pq->heap[0]->val = NULL; pq->heap[0]->priority = INT_MAX;
     pq->size = 0;
     return pq;
 }
 
+void PriorityQueue__push(PriorityQueue* pq, void* val, int prior) {
+    // Create the node
+    PriorityItem* pit = (PriorityItem*) malloc(sizeof(PriorityItem));
+    pit->val = val;
+    pit->priority = prior;
 
+    // Place it to the end of the head
+    pq->heap[++pq->size] = pit;
+
+    
+    // Fix max heap
+    int cur_idx = pq->size;
+    while (pq->heap[cur_idx]->priority > pq->heap[parent(cur_idx)]->priority) {
+        PriorityItem__swap(pq->heap[cur_idx], pq->heap[parent(cur_idx)]);
+        cur_idx = parent(cur_idx);
+    }
+
+}
+
+void* PriorityQueue__peek(PriorityQueue* pq) {
+    return pq->heap[1]->val;
+}
+
+void* PriorityQueue__pop(PriorityQueue* pq) {
+    void* retval = pq->heap[1]->val;
+
+    // Swap head and tail
+    pq->heap[1]->val = pq->heap[pq->size]->val;
+    pq->heap[1]->priority = pq->heap[pq->size]->priority;
+
+    // Remove tail (old head)
+    free(pq->heap[pq->size]);
+    pq->size--;
+
+    // Fix heap
+    if (pq->size) __maxHeapify(pq, 1);
+
+    return retval;
+}
+
+ushort PriorityQueue__isEmpty(PriorityQueue* pq) {
+    return pq->size == 0;
+}
+
+void PriorityQueue__destroy(PriorityQueue* pq) {
+    for (int i = 0; i < pq->size; ++i) { free(pq->heap[i]->val); free(pq->heap[i]); }
+    free(pq->heap);
+    free(pq);
+}
 //======= end PriorityQueue ===========================

@@ -55,7 +55,7 @@ ProcessData* ProcessData__create(int pid, int t_arr, int t_run, int prior) {
 */
 typedef struct PCB
 {
-    ProcessData* p_data;
+    ProcessData p_data;
     int t_remaining;
     int t_ta;    // Turn-around time
     pstate state;
@@ -70,7 +70,7 @@ typedef struct PCB
  * @param state  Process State
  * @return Pointer to the created PCB Instance
 */
-PCB* PCB__create(ProcessData* p_data, int t_r, int t_ta, pstate state) {
+PCB* PCB__create(ProcessData p_data, int t_r, int t_ta, pstate state) {
     PCB* pcb = (PCB*) malloc(sizeof(PCB));
     pcb->p_data = p_data;
     pcb->t_remaining = t_r;

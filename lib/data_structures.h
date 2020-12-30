@@ -131,8 +131,7 @@ void* FIFOQueue__peek(FIFOQueue* fq) {
 void* FIFOQueue__pop(FIFOQueue* fq) {
     // Case 0 : Empty LL
     if (fq->head == NULL) return NULL;
-    void* val = malloc(sizeof(fq->head->val));
-    memcpy(val, fq->head->val, sizeof(fq->head->val));
+    void* val = fq->head->val;
 
     // Case 1 : last element
     if (fq->head == fq->tail) {

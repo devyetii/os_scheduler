@@ -176,5 +176,35 @@ ushort FIFOQueue__isEmpty(FIFOQueue* fq) {
 //======= end FIFOQueue ===========================
 
 //======= begin PriorityQueue =========================
+typedef struct PriorityItem {
+    void* val;
+    int priority;
+} PriorityItem;
+
+void PriorityItem__swap(PriorityItem* pit1, PriorityItem* pit2) {
+    PriorityItem* pit_tmp = (PriorityItem*) malloc(sizeof(pit1));
+    memcpy(pit_tmp, pit1, sizeof(pit1));
+
+    pit1->val = pit2->val;
+    pit1->priority = pit2->priority;
+
+    pit2->val = pit_tmp->val;
+    pit2->priority = pit_tmp->priority;
+
+    free(pit_tmp);
+}
+
+typedef struct PriorityQueue {
+    PriorityQueue* heap;
+    int size;
+} PriorityQueue;
+
+PriorityQueue* PriorityQueue__create(int max_sz) {
+    PriorityQueue* pq = (PriorityQueue*) malloc(sizeof(PriorityQueue));
+    pq->heap = (PriorityItem*) malloc(sizeof(PriorityItem) * max_sz);
+    pq->size = 0;
+    return pq;
+}
+
 
 //======= end PriorityQueue ===========================

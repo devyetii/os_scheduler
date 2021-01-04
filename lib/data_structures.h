@@ -60,6 +60,7 @@ typedef struct PCB
     ProcessData p_data;
     int t_remaining;
     int t_ta;    // Turn-around time
+    int t_w;    // Waiting time
     pstate state;
 } PCB;
 
@@ -77,6 +78,7 @@ PCB* PCB__create(ProcessData p_data, int t_r, int t_ta, pstate state) {
     pcb->p_data = p_data;
     pcb->t_remaining = t_r;
     pcb->t_ta = t_ta;
+    pcb->t_w = t_ta - p_data.t_running;
     pcb->state = state;
 
     return pcb;

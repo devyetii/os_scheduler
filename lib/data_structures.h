@@ -2,6 +2,7 @@
  * Here are all the Data Structures needed in the project
  * @author : Ebrahim Gomaa (HmanA6399)
 */
+#pragma once
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

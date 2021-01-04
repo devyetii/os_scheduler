@@ -6,15 +6,15 @@ typedef enum ALGOTYPE {
     RR
 } ALGOTYPE;
 
-void HPF() {
+void execHPF() {
     // TODO :: Implement
 }
 
-void SRTN() {
+void execSRTN() {
     // TODO :: Implement
 }
 
 
-void RR(int q) {
+void execRR(int q) {
     // TODO :: Implement
 }

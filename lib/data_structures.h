@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include "safeExit.h"
 
 /**
  * Enumerating process state
@@ -49,6 +50,16 @@ ProcessData* ProcessData__create(int pid, int t_arr, int t_run, int prior) {
     return pd;
 }
 
+
+void ProcessData__print(ProcessData* pd) {
+    printf("%d\t%d\t%d\t%d\n", pd->pid, pd->t_arrival, pd->t_running, pd->priority);
+}
+
+ProcessData NULL_PROCESS_DATA() {
+    ProcessData pd;
+    pd.pid = -1;
+    return pd;
+}
 //========== end ProcessData =================
 
 //========== begin PCB ======================

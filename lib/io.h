@@ -10,7 +10,7 @@ FILE* openFile(char* path, char* perms) {
     FILE* fptr = fopen(path, perms);
     if (fptr == NULL) {
         perror("Error in fopen: ");
-        exit(-1);
+        safeExit(-1);
     }
 
     return fptr;
@@ -29,7 +29,7 @@ ProcessData* readProcess(FILE* f) {
     do
     {
         getline(&line, &size, f);
-    } while ((line[0] != '#') && !feof(f));
+    } while ((line[0] == '#') && !feof(f));
     
     int pid, arr, runn, prior;
     sscanf(line, "%d\t%d\t%d\t%d\n", &pid, &arr, &runn, &prior);

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <wait.h>
+#include "safeExit.h"
 
 extern char** environ;
 
@@ -21,7 +22,7 @@ int createChild(char* path, int arg1, int arg2)
         return pid;
     } else {
         perror("Error in spawn");
-        exit(-1);
+        safeExit(-1);
     }
 }
 
@@ -29,4 +30,13 @@ void handleChild(int signum) {
     int status;
     pid_t p = wait(&status);
     printf("A fuckin' child %d has changed state with status %d\n", p, status);
+}
+
+int waitForChild(int child_pid) {
+    int status;
+    if (waitpid(child_pid, &status, 0)) {
+        perror("Error in waitpid");
+        safeExit(-1);
+    }
+    return status;
 }

@@ -11,10 +11,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include "safeExit.h"
 
 typedef short bool;
 #define true 1
-#define false 1
+#define false 0
 
 #define SHKEY 300
 

@@ -1,3 +1,4 @@
+#pragma once
 #include <stdio.h>      //if you don't use scanf/printf change this include
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -56,7 +57,6 @@ void initClk()
  * Input: terminateAll: a flag to indicate whether that this is the end of simulation.
  *                      It terminates the whole system and releases resources.
 */
-
 void destroyClk(bool terminateAll)
 {
     shmdt(shmaddr);

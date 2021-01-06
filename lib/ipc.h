@@ -14,8 +14,11 @@
 #define SCHEDULER_TYPE 0xCD
 
 // SHM defines
-#define SHMPERMS 04444
-#define PROCESS_GENERATOR_FINISHED 0xAA
+#define SHMPERMS 0666
+#define REM_TIME_SHM 0xAA
+
+// SEM defines
+#define SEMPERMS 0666
 
 //======== begin Message Queue methods (specialized for the ProcessData)======
 typedef struct pdata_msg {
@@ -80,21 +83,21 @@ int getOrCreateShmID(key_t key) {
     return shmid;
 }
 
-int getShmID(key_t key) {
-    int shmid = -1;
-    while ((int)shmid == -1)
-    {
-        shmid = shmget(key, sizeof(int), SHMPERMS);
+int getShmID(key_t key, short creator) {
+    int shm_id = shmget(key, sizeof(int), SHMPERMS | (creator ? IPC_CREAT : 0));
+    if (shm_id == -1) {
+        if (creator) {
+            perror("Error in starting remaining time shared memory initialization");
+            safeExit(-1);
+        }
+        return -1;
     }
+
+    return shm_id;
 }
 
 int* getShmAddr(int shmid) {
-    int* shmaddr = (int*) shmat(shmid, (void*) 0, 0);
-    if (shmaddr == NULL) {
-        perror("Error in shmat");
-        safeExit(-1);
-    }
-    return shmaddr;
+    return (int*) shmat(shmid, (void*) 0, 0);
 }
 
 void releaseShmAddr(int* shm_addr) {
@@ -112,3 +115,77 @@ void deleteShm(int shm_id) {
 	printf("Shared Memory was deleted.\n");
 }
 //======== end Shared memory methods ========
+//======== begin Semaphore set methods ======
+union semun {
+    int              val;    /* Value for SETVAL */
+    struct semid_ds *buf;    /* Buffer for IPC_STAT, IPC_SET */
+    unsigned short  *array;  /* Array for GETALL, SETALL */
+    struct seminfo  *__buf;  /* Buffer for IPC_INFO (Linux-specific) */
+};
+
+/**
+ * Get Binary Sem set, init all sims to 0. Exits on failure
+ * 
+ * @param key_salt Salt for the given key
+*/
+int getSem(int key_salt) {
+    int sem_id = semget(ftok(PATH, key_salt), 1, SEMPERMS);
+
+    if (sem_id == -1) {
+        perror("Error in semget");
+        exit(-1);
+    }   
+
+    union semun initer;
+    initer.val = 0;
+    if (semctl(sem_id, 0, SETVAL, initer) == -1) {
+        perror("Error in semget");
+        exit(-1);
+    }
+
+    return sem_id;
+}
+
+/**
+ * Attempt to aquire a symaphore
+ * 
+ * @param sem_set_id identifier for the used symaphore set
+*/
+int __down(int sem_set_id) {
+    struct sembuf p_op;
+
+    p_op.sem_num = 0;
+    p_op.sem_op = -1;
+    p_op.sem_flg = !IPC_NOWAIT;
+
+    return semop(sem_set_id, &p_op, 1);
+}
+
+/**
+ * Release a symaphore
+ * 
+ * @param sem_set_id identifier for the used symaphore set
+*/
+int __up(int sem_set_id) {
+    struct sembuf v_op;
+
+    v_op.sem_num = 0;
+    v_op.sem_op = 1;
+    v_op.sem_flg = IPC_NOWAIT;
+
+    return semop(sem_set_id, &v_op, 1);
+}
+
+/**
+ * Clear Sem resource (cancelation point)
+ * 
+ * @param sem_id id for the sem set to be deleted
+*/
+void deleteSemSet(int sem_id) {
+    if (semctl(sem_id, 0, IPC_RMID) == -1) {
+		perror("Sem set could not be deleted.");
+		exit(-1);
+	}
+
+	printf("Sem set was deleted.\n");
+}

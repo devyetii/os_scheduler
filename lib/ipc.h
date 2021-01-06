@@ -52,7 +52,7 @@ void sendProcessMessage(pdata_msg message, int msgq_id) {
 
 ProcessData recieveProcessMessage(int msgq_id, long typ) {
     pdata_msg recieved_message;
-    int msgrcv_status = msgrcv(msgq_id, &recieved_message, MAX_MSG_SZ, typ, !IPC_NOWAIT);
+    int msgrcv_status = msgrcv(msgq_id, &recieved_message, MAX_MSG_SZ, typ, IPC_NOWAIT);
     if (msgrcv_status != -1) {
         return recieved_message.pdata;
     }

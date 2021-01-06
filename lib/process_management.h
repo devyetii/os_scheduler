@@ -29,7 +29,7 @@ int createChild(char* path, int arg1, int arg2)
 void handleChild(int signum) {
     int status;
     pid_t p = wait(&status);
-    printf("A fuckin' child %d has changed state with status %d\n", p, status);
+    printf("A child %d has changed state with status %d\n", p, status);
 }
 
 int waitForChild(int child_pid) {

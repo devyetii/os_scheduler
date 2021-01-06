@@ -28,7 +28,7 @@ typedef struct ProcessData
     int pid;
     int t_arrival;
     int t_running;
-    int priority;
+    long long priority;
 } ProcessData;
 
 /**

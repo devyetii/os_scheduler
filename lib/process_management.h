@@ -34,7 +34,7 @@ void handleChild(int signum) {
 
 int waitForChild(int child_pid) {
     int status;
-    if (waitpid(child_pid, &status, 0)) {
+    if (waitpid(child_pid, &status, 0) == -1) {
         perror("Error in waitpid");
         safeExit(-1);
     }

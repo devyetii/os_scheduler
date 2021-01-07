@@ -32,16 +32,17 @@ void stopProcess(int sinum)
     signal(SIGUSR2, stopProcess);
 }
 ///////////////////////testing function //////////////////////
-void doneFun(PriorityQueue *PQ, int v)
+void doneFun(PriorityQueue *PQ, int* v)
 {
-    PriorityQueue__push(PQ, &v, v * 30);
+    PriorityQueue__push(PQ, &v, (*v) * 30);
 }
 void creatPQ(PriorityQueue *PQ)
 {
-    int y = 9;
+    int y = 9, *u;
     for (int i = 0; i < 8; i++)
     {
-        int u = y;
+        u = malloc(sizeof(int));
+        *u = y;
         doneFun(PQ, u);
         y--;
     }
@@ -99,7 +100,7 @@ void insert_all_comming_in_PQueue(PriorityQueue *PQ, int type)
 int main(int argc, char *argv[])
 {
     PCB *current_process; // current process in run
-    PriorityQueue *PQ = PriorityQueue__create(0), *i = PriorityQueue__create(0);
+    PriorityQueue *PQ = PriorityQueue__create(1024), *i = PriorityQueue__create(1024);
     initRemainingTimeCommunication(true);
     int type = atoi(argv[1]);
     initClk();

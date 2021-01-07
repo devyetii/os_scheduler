@@ -33,7 +33,7 @@ int main(int argc, char * argv[])
     }
 
     // Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
-    int algo, q;
+    int algo = 0, q = 0;
     printf("Please enter the algorithm needed (0: HPF - 1: SRTN - 2: RR): ");
     scanf("%d", &algo);
 
@@ -63,6 +63,7 @@ int main(int argc, char * argv[])
                 // In case the process time has come, pop from the queue and send to the scheduler
                 FIFOQueue__pop(fq);
                 sendProcessMessage(createProcessMessage(SCHEDULER_TYPE, *top_pd), msg_q_id);
+                ProcessData__destroy(top_pd);
                 top_pd = FIFOQueue__peek(fq);
             }
         }

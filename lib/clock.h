@@ -1,3 +1,4 @@
+#pragma once
 #include <stdio.h>      //if you don't use scanf/printf change this include
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -10,10 +11,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include "safeExit.h"
 
 typedef short bool;
 #define true 1
-#define false 1
+#define false 0
 
 #define SHKEY 300
 
@@ -56,7 +58,6 @@ void initClk()
  * Input: terminateAll: a flag to indicate whether that this is the end of simulation.
  *                      It terminates the whole system and releases resources.
 */
-
 void destroyClk(bool terminateAll)
 {
     shmdt(shmaddr);

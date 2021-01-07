@@ -12,3 +12,7 @@ all: clean build
 
 run:
 	./process_generator.out
+memtest:
+	rm -f try
+	gcc -o try try.c
+	valgrind --tool=memcheck ./try

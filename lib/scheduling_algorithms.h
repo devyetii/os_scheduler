@@ -1,11 +1,20 @@
-void SRTN() {
+#pragma once
+
+typedef enum ALGOTYPE {
+    HPF,
+    SRTN,
+    RR
+} ALGOTYPE;
+
+void execHPF() {
     // TODO :: Implement
 }
 
-void HPF() {
+void execSRTN() {
     // TODO :: Implement
 }
 
-void RR(int q) {
+
+void execRR(int q) {
     // TODO :: Implement
 }

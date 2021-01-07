@@ -28,7 +28,7 @@ typedef struct ProcessData
     int pid;
     int t_arrival;
     int t_running;
-    long long priority;
+    int priority;
 } ProcessData;
 
 /**
@@ -50,9 +50,23 @@ ProcessData* ProcessData__create(int pid, int t_arr, int t_run, int prior) {
     return pd;
 }
 
-
+/**
+ * Print ProcessData
+ * 
+ * @param pd Pointer to ProcessData
+*/
 void ProcessData__print(ProcessData* pd) {
     printf("%d\t%d\t%d\t%d\n", pd->pid, pd->t_arrival, pd->t_running, pd->priority);
+}
+
+/**
+ * Free the allocated memory for given ProcessData pointer
+ * 
+ * @param pd Pointer to ProcessData memory location
+*/
+void ProcessData__destroy(ProcessData* pd) {
+    if (pd != (ProcessData*) -1 && pd != NULL)
+        free(pd);
 }
 
 ProcessData NULL_PROCESS_DATA() {
@@ -93,6 +107,16 @@ PCB* PCB__create(ProcessData p_data, int t_r, int t_ta, pstate state) {
     pcb->state = state;
 
     return pcb;
+}
+
+/**
+ * Free the allocated memory for given PCB pointer
+ * 
+ * @param pcb Pointer to PCB memory location
+*/
+void PCB__destroy(PCB* pcb) {
+    if (pcb != (PCB*) -1 && pcb != NULL)
+        free(pcb);
 }
 //======= end PCB =========================
 
@@ -197,7 +221,7 @@ static inline ushort isLeaf(int idx, int sz) { return ((idx >= (sz>>1)) && idx <
 
 typedef struct PriorityItem {
     void* val;
-    int priority;
+    long long priority;
 } PriorityItem;
 
 void PriorityItem__swap(PriorityItem* pit1, PriorityItem* pit2) {
@@ -246,7 +270,7 @@ PriorityQueue* PriorityQueue__create(int max_sz) {
     return pq;
 }
 
-void PriorityQueue__push(PriorityQueue* pq, void* val, int prior) {
+void PriorityQueue__push(PriorityQueue* pq, void* val, long long prior) {
     // Create the node
     PriorityItem* pit = (PriorityItem*) malloc(sizeof(PriorityItem));
     pit->val = val;

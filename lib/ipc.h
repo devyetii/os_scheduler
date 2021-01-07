@@ -129,7 +129,7 @@ union semun {
  * @param key_salt Salt for the given key
 */
 int getSem(int key_salt) {
-    int sem_id = semget(ftok(PATH, key_salt), 1, SEMPERMS);
+    int sem_id = semget(ftok(PATH, key_salt), 1, SEMPERMS | IPC_CREAT);
 
     if (sem_id == -1) {
         perror("Error in semget");
@@ -156,7 +156,7 @@ int __down(int sem_set_id) {
 
     p_op.sem_num = 0;
     p_op.sem_op = -1;
-    p_op.sem_flg = !IPC_NOWAIT;
+    p_op.sem_flg = IPC_NOWAIT;
 
     return semop(sem_set_id, &p_op, 1);
 }

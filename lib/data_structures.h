@@ -243,7 +243,6 @@ typedef struct PriorityQueue {
 
 void __maxHeapify(PriorityQueue* pq, int idx) {
     if (isLeaf(idx, pq->size)) return;
-    // printf("\nAt size %d, node %d is not a leaf\n", pq->size, idx);
 
     PriorityItem *cur = pq->heap[idx], *left = pq->heap[leftChild(idx)], *right = pq->heap[rightChild(idx)];
     

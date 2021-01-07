@@ -23,7 +23,7 @@ ProcessData* readProcess(FILE* file )
     {
         char line[BUFSIZ];
         bool found=true;
-        while (found) 
+        while (found && !feof(file)) 
         {
         fgets(line,BUFSIZ,file);
         if(line[0]=='#')

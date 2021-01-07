@@ -7,9 +7,6 @@
 int remainingtime;
 
 void handleStateChange(int signum) {
-    // pre-emption
-    printf("Process %d paused. remaining_time =  %d\n", getpid(), remainingtime);
-
     // Write remainingTime
     setRemainingTime(remainingtime);
 
@@ -28,10 +25,8 @@ int main(int agrc, char * argv[])
     // Handle SIGUSR1 sent by the scheduler on pre-emption
     signal(SIGUSR1, handleStateChange);
 
-
     // Initially get the value  of remaining time
     remainingtime = atoi(argv[1]);
-    printf("Process %d started. remaining_time =  %d\n", getpid(), remainingtime);
 
     // Use clock changes to change the remaining time
     int old_clock = getClk(), cur_clock = -1;
@@ -44,7 +39,6 @@ int main(int agrc, char * argv[])
         // Change remaining time only when clock has changed
         if ((cur_clock > old_clock)) {
             remainingtime-= 1;
-            printf("Process step %d \n", remainingtime);
         }
 
         // Update clocks

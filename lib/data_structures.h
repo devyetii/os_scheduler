@@ -217,7 +217,7 @@ ushort FIFOQueue__isEmpty(FIFOQueue* fq) {
 static inline int parent(int i) { return i>>1; }
 static inline int leftChild(int i) { return (i<<1); }
 static inline int rightChild(int i) { return (i<<1)+1; }
-static inline ushort isLeaf(int idx, int sz) { return ((idx >= (sz>>1)) && idx <= sz); }
+static inline ushort isLeaf(int idx, int sz) { return ((leftChild(idx) > sz)); }
 
 typedef struct PriorityItem {
     void* val;
@@ -244,15 +244,15 @@ typedef struct PriorityQueue {
 void __maxHeapify(PriorityQueue* pq, int idx) {
     if (isLeaf(idx, pq->size)) return;
 
-    PriorityItem *cur = pq->heap[idx], *left = pq->heap[leftChild(idx)], *right = pq->heap[rightChild(idx)];
+    PriorityItem *cur = pq->heap[idx], *left = pq->heap[leftChild(idx)], *right = (rightChild(idx) <= pq->size) ? pq->heap[rightChild(idx)] : NULL;
     
     if (
-        cur->priority < right->priority ||
-        cur->priority < left->priority
+        cur->priority < left->priority ||
+        (right != NULL && cur->priority < right->priority)
     ) {
         // Choose the greater for swapping
-        PriorityItem* grtr = right->priority > left->priority ? right : left;
-        int grtr_idx = right->priority > left->priority ? rightChild(idx) : leftChild(idx);
+        PriorityItem* grtr = (right != NULL && (right->priority > left->priority)) ? right : left;
+        int grtr_idx = (right != NULL && (right->priority > left->priority)) ? rightChild(idx) : leftChild(idx);
         
         // Swap and recurse
         PriorityItem__swap(cur, grtr);
@@ -264,9 +264,15 @@ PriorityQueue* PriorityQueue__create(int max_sz) {
     PriorityQueue* pq = (PriorityQueue*) malloc(sizeof(PriorityQueue));
     pq->heap = (PriorityItem**) malloc(sizeof(PriorityItem*) * (max_sz + 5));
     pq->heap[0] = (PriorityItem*) malloc(sizeof(PriorityItem));
-    pq->heap[0]->val = NULL; pq->heap[0]->priority = INT_MAX;
+    pq->heap[0]->val = NULL; pq->heap[0]->priority = __INT64_MAX__;
     pq->size = 0;
     return pq;
+}
+
+void ____printHeap(PriorityQueue* pq) {
+    printf("\n");
+    for (int i = 1; i <= pq->size; ++i) printf("%lld ", pq->heap[i]->priority);
+    printf("\n");
 }
 
 void PriorityQueue__push(PriorityQueue* pq, void* val, long long prior) {
@@ -275,7 +281,7 @@ void PriorityQueue__push(PriorityQueue* pq, void* val, long long prior) {
     pit->val = val;
     pit->priority = prior;
 
-    // Place it to the end of the head
+    // Place it to the end of the heap
     pq->heap[++pq->size] = pit;
 
     
@@ -285,7 +291,7 @@ void PriorityQueue__push(PriorityQueue* pq, void* val, long long prior) {
         PriorityItem__swap(pq->heap[cur_idx], pq->heap[parent(cur_idx)]);
         cur_idx = parent(cur_idx);
     }
-
+    // ____printHeap(pq);
 }
 
 void* PriorityQueue__peek(PriorityQueue* pq) {

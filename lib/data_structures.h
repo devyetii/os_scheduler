@@ -84,8 +84,10 @@ typedef struct PCB
 {
     ProcessData p_data;
     int t_remaining;
-    int t_ta;    // Turn-around time
-    int t_w;    // Waiting time
+    int t_ta; // Turn-around time
+    int t_w;  // Waiting time
+    int t_st;
+    int actual_pid;
     pstate state;
 } PCB;
 
@@ -95,17 +97,22 @@ typedef struct PCB
  * @param p_data Pointer to the process data instance
  * @param t_r    Initial Remaining Time
  * @param t_ta   Initial Turnaround time
+ * @param t_w    Initial waiting Time
  * @param state  Process State
+ * @param actual_pid  Pid of process
+ * @param t_st  frist clock in run
  * @return Pointer to the created PCB Instance
 */
-PCB* PCB__create(ProcessData p_data, int t_r, int t_ta, pstate state) {
-    PCB* pcb = (PCB*) malloc(sizeof(PCB));
+PCB *PCB__create(ProcessData p_data, int t_r, int t_w, int t_ta, pstate state, int actual_pid, int t_st)
+{
+    PCB *pcb = (PCB *)malloc(sizeof(PCB));
     pcb->p_data = p_data;
     pcb->t_remaining = t_r;
     pcb->t_ta = t_ta;
-    pcb->t_w = t_ta - p_data.t_running;
+    pcb->t_w = t_w;
     pcb->state = state;
-
+    pcb->t_st = t_st;
+    pcb->actual_pid = actual_pid;
     return pcb;
 }
 

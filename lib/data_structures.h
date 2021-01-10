@@ -52,9 +52,25 @@ ProcessData *ProcessData__create(int pid, int t_arr, int t_run, int prior)
     return pd;
 }
 
+/**
+ * Print ProcessData
+ * 
+ * @param pd Pointer to ProcessData
+*/
 void ProcessData__print(ProcessData *pd)
 {
     printf("%d\t%d\t%d\t%d\n", pd->pid, pd->t_arrival, pd->t_running, pd->priority);
+}
+
+/**
+ * Free the allocated memory for given ProcessData pointer
+ * 
+ * @param pd Pointer to ProcessData memory location
+*/
+void ProcessData__destroy(ProcessData *pd)
+{
+    if (pd != (ProcessData *)-1 && pd != NULL)
+        free(pd);
 }
 
 ProcessData NULL_PROCESS_DATA()
@@ -86,19 +102,34 @@ typedef struct PCB
  * @param p_data Pointer to the process data instance
  * @param t_r    Initial Remaining Time
  * @param t_ta   Initial Turnaround time
+ * @param t_w    Initial waiting Time
  * @param state  Process State
+ * @param actual_pid  Pid of process
+ * @param t_st  frist clock in run
  * @return Pointer to the created PCB Instance
 */
-PCB *PCB__create(ProcessData p_data, int t_r, int t_ta, pstate state)
+PCB *PCB__create(ProcessData p_data, int t_r, int t_w, int t_ta, pstate state, int actual_pid, int t_st)
 {
     PCB *pcb = (PCB *)malloc(sizeof(PCB));
     pcb->p_data = p_data;
     pcb->t_remaining = t_r;
     pcb->t_ta = t_ta;
-    pcb->t_w = t_ta - p_data.t_running;
+    pcb->t_w = t_w;
     pcb->state = state;
-
+    pcb->t_st = t_st;
+    pcb->actual_pid = actual_pid;
     return pcb;
+}
+
+/**
+ * Free the allocated memory for given PCB pointer
+ * 
+ * @param pcb Pointer to PCB memory location
+*/
+void PCB__destroy(PCB *pcb)
+{
+    if (pcb != (PCB *)-1 && pcb != NULL)
+        free(pcb);
 }
 //======= end PCB =========================
 
@@ -211,7 +242,7 @@ ushort FIFOQueue__isEmpty(FIFOQueue *fq)
 static inline int parent(int i) { return i >> 1; }
 static inline int leftChild(int i) { return (i << 1); }
 static inline int rightChild(int i) { return (i << 1) + 1; }
-static inline ushort isLeaf(int idx, int sz) { return ((idx >= (sz >> 1)) && idx <= sz); }
+static inline ushort isLeaf(int idx, int sz) { return ((leftChild(idx) > sz)); }
 
 typedef struct PriorityItem
 {
@@ -242,17 +273,16 @@ void __maxHeapify(PriorityQueue *pq, int idx)
 {
     if (isLeaf(idx, pq->size))
         return;
-    // printf("\nAt size %d, node %d is not a leaf\n", pq->size, idx);
 
-    PriorityItem *cur = pq->heap[idx], *left = pq->heap[leftChild(idx)], *right = pq->heap[rightChild(idx)];
+    PriorityItem *cur = pq->heap[idx], *left = pq->heap[leftChild(idx)], *right = (rightChild(idx) <= pq->size) ? pq->heap[rightChild(idx)] : NULL;
 
     if (
-        cur->priority < right->priority ||
-        cur->priority < left->priority)
+        cur->priority < left->priority ||
+        (right != NULL && cur->priority < right->priority))
     {
         // Choose the greater for swapping
-        PriorityItem *grtr = right->priority > left->priority ? right : left;
-        int grtr_idx = right->priority > left->priority ? rightChild(idx) : leftChild(idx);
+        PriorityItem *grtr = (right != NULL && (right->priority > left->priority)) ? right : left;
+        int grtr_idx = (right != NULL && (right->priority > left->priority)) ? rightChild(idx) : leftChild(idx);
 
         // Swap and recurse
         PriorityItem__swap(cur, grtr);
@@ -266,9 +296,17 @@ PriorityQueue *PriorityQueue__create(int max_sz)
     pq->heap = (PriorityItem **)malloc(sizeof(PriorityItem *) * (max_sz + 5));
     pq->heap[0] = (PriorityItem *)malloc(sizeof(PriorityItem));
     pq->heap[0]->val = NULL;
-    pq->heap[0]->priority = INT_MAX;
+    pq->heap[0]->priority = __INT64_MAX__;
     pq->size = 0;
     return pq;
+}
+
+void ____printHeap(PriorityQueue *pq)
+{
+    printf("\n");
+    for (int i = 1; i <= pq->size; ++i)
+        printf("%lld ", pq->heap[i]->priority);
+    printf("\n");
 }
 
 void PriorityQueue__push(PriorityQueue *pq, void *val, long long prior)
@@ -278,7 +316,7 @@ void PriorityQueue__push(PriorityQueue *pq, void *val, long long prior)
     pit->val = val;
     pit->priority = prior;
 
-    // Place it to the end of the head
+    // Place it to the end of the heap
     pq->heap[++pq->size] = pit;
 
     // Fix max heap
@@ -288,6 +326,7 @@ void PriorityQueue__push(PriorityQueue *pq, void *val, long long prior)
         PriorityItem__swap(pq->heap[cur_idx], pq->heap[parent(cur_idx)]);
         cur_idx = parent(cur_idx);
     }
+    // ____printHeap(pq);
 }
 
 void *PriorityQueue__peek(PriorityQueue *pq)

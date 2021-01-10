@@ -8,7 +8,6 @@ const int rt_shm_k = 0xBCD, rt_sem_k = 0xABC;
 void initRemainingTimeCommunication(bool creator) {
     // Init shared memory 
     rem_time_shm_id = getShmID(rt_shm_k, creator);
-
     rem_time_shmaddr = getShmAddr(rem_time_shm_id);    
 }
 
@@ -23,4 +22,11 @@ int getReminingTime() {
 void setRemainingTime(int val) {
     if (rem_time_shmaddr != (void *) -1)
         *rem_time_shmaddr = val;
+}
+
+void destroyRemainingTimeCommunication(bool creator) {
+    shmdt(rem_time_shmaddr);
+    if (creator) {
+        shmctl(rem_time_shm_id, IPC_RMID, (struct shmid_ds *) 0);
+    }
 }

@@ -214,6 +214,7 @@ ushort FIFOQueue__isEmpty(FIFOQueue* fq) {
 //======= end FIFOQueue ===========================
 
 //======= begin PriorityQueue =========================
+#define MAXSZ 10000
 static inline int parent(int i) { return i>>1; }
 static inline int leftChild(int i) { return (i<<1); }
 static inline int rightChild(int i) { return (i<<1)+1; }
@@ -261,9 +262,9 @@ void __maxHeapify(PriorityQueue* pq, int idx) {
     }
 }
 
-PriorityQueue* PriorityQueue__create(int max_sz) {
+PriorityQueue* PriorityQueue__create() {
     PriorityQueue* pq = (PriorityQueue*) malloc(sizeof(PriorityQueue));
-    pq->heap = (PriorityItem**) malloc(sizeof(PriorityItem*) * (max_sz + 5));
+    pq->heap = (PriorityItem**) malloc(sizeof(PriorityItem*) * (MAXSZ + 5));
     pq->heap[0] = (PriorityItem*) malloc(sizeof(PriorityItem));
     pq->heap[0]->val = NULL; pq->heap[0]->priority = __INT64_MAX__;
     pq->size = 0;

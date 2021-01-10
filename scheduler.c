@@ -17,6 +17,12 @@ bool process_finished = false;
 
 int cur_clock;
 
+void clearIPC(int signum) {
+    destroyRemainingTimeCommunication(true);
+    destroyClk(false);
+    exit(0);
+}
+
 void handler(int signum) {
     finished = true;
 }
@@ -42,6 +48,7 @@ int main(int argc, char * argv[])
     // Sent by the process_generator when it finishes all processes
     signal(SIGCHLD, handleProcessFinished);
     signal(SIGUSR1, handler);
+    signal(SIGINT, clearIPC);
 
     // Init q
     msg_q_id = getProcessMessageQueue(KEYSALT);
@@ -64,7 +71,7 @@ int main(int argc, char * argv[])
                 ProcessData__print(&recievedProcess);
 
                 // create the PCB
-                PCB* p = PCB__create(recievedProcess, recievedProcess.t_running, 0, IDLE);
+                PCB* p = PCB__create(recievedProcess, recievedProcess.t_running, 0, getClk(), IDLE, 0, 0);
                 
                 // Push it to the q (depending on the algorithm)
                 FIFOQueue__push(fq, p);

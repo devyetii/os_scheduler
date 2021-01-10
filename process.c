@@ -6,6 +6,12 @@
 /* Modify this file as needed*/
 int remainingtime;
 
+void clearIPC(int signum) {
+    destroyRemainingTimeCommunication(false);
+    destroyClk(false);
+    exit(0);
+}
+
 void handleStateChange(int signum) {
     // Write remainingTime
     setRemainingTime(remainingtime);
@@ -24,6 +30,7 @@ int main(int agrc, char * argv[])
 
     // Handle SIGUSR1 sent by the scheduler on pre-emption
     signal(SIGUSR1, handleStateChange);
+    signal(SIGINT, clearIPC);
 
     // Initially get the value  of remaining time
     remainingtime = atoi(argv[1]);
@@ -45,6 +52,7 @@ int main(int agrc, char * argv[])
         old_clock = cur_clock;
     }
     
+    destroyRemainingTimeCommunication(false);
     destroyClk(false);
     
     return 0;

@@ -11,6 +11,13 @@ void clearResources(int signum);
 // Q+sem for communication with the scheduler
 int msg_q_id, sem_id;
 
+void initiateClock(int signum) {
+    int clkPid = createChild("./clk.out", 0, 0);
+
+    // Init clock shared memory
+    initClk();
+}
+
 int main(int argc, char * argv[])
 {
     // Handle both SIGINT and SIGSEGV to avoid leakage of resources in case od segmentation faults

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 #include "data_structures.h"
+#include <string.h>
 #include <stdbool.h>
 /**
  * readProcess
@@ -81,7 +82,7 @@ void writeProcess(FILE *file, PCB *P, int timestep)
   {
     if (P->state == FINISHED)
     {
-      fprintf(file, "At time %d process %d Finished arr %d total %d remain %d wait %d TA %d WTA %f\n", timestep, P->p_data.pid, P->p_data.t_arrival, P->p_data.t_running, P->t_remaining, P->t_w, P->t_ta, P->t_ta / (float)P->p_data.t_running);
+      fprintf(file, "At time %d process %d Finished arr %d total %d remain %d wait %d TA %d WTA %.2f\n", timestep, P->p_data.pid, P->p_data.t_arrival, P->p_data.t_running, P->t_remaining, P->t_w, P->t_ta, P->t_ta / (float)P->p_data.t_running);
     }
     else
     {
@@ -112,12 +113,13 @@ void writeProcess(FILE *file, PCB *P, int timestep)
  * @param char* stat_name
  * @param char* stat_value
 */
-void writeStats(FILE *file, char *stat_name, char *stat_value)
+void writeStats(FILE *file, char *stat_name, float *stat_value)
 {
   if (file != NULL)
-  {
-    fprintf(file, "\n %s =  %s \n", stat_name, stat_value);
-  }
+    if (stat_value != NULL)
+      fprintf(file, stat_name, *stat_value);
+    else
+      fprintf(file, stat_name, "%");
 }
 /**
  * isEndOfFile

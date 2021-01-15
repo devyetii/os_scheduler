@@ -3,170 +3,135 @@
 #include "lib/data_structures.h"
 #include "lib/process_management.h"
 #include "lib/remaining_time.h"
-///////////////////////////// global variables ////////////////
-PCB *current_process;
-int msg_q_id, finished = -1, sem_id, run_clock = -1, old_clock = -1;
-bool flag_in_run = false, chang_in_child = false, read_done = false;
-/////////////////// functions handle signals /////////////////
-void handlerAndIntial();
-void handlerFromGenerator(int signum);
-void handleProcessFinished(int signum);
-void clearIPC(int signum);
-/////////////////////////function for all algorithim/////////////
-void setFinishedProcesss();
-bool processNotFinished(void *q, int type);
-void insert_all_comming_in_Queue(void *Q, int type);
-void setDateNotFinishedP(void *q, int type);
-void startProcess(void *PQ, int type);
-///////////////////////////////functions for SRTN /////////////////////
-void checkComeShortest(void *PQ, int type);
-////////////////////////////////////////////
+int sem_id, msq_id, type, finished = -1, old_clk = -1, change_child = 0, run_clk = -1;
+PCB *current_process = NULL;
+bool run = false, p_end = false;
+void *Q;
 
+void handlerChild(int signum);
+void clearIPC(int signum);
+void handlerUSR1(int signum);
+bool insert_in_Queue(void *PQ);
+bool processNotFinished(void *q, int type);
+void runProcess(void *Q, int type);
+void finishedProcess();
+void STRN(PriorityQueue *Q);
+void premtive(void *Q);
 int main(int argc, char *argv[])
 {
-    printf("process id for sc %d \n", getpid());
+    printf("scheduar id %d \n", getpid());
 
-    // current process in run
-    void *Queue;
-    int type = atoi(argv[1]), quantum;
-    if (type != 2)
-        Queue = PriorityQueue__create(10000);
+    int quantam;
+    type = atoi(argv[1]);
+    if (type < 2)
+        Q = PriorityQueue__create(10000);
     else
     {
-        Queue = FIFOQueue__create();
-        quantum = atoi(argv[2]);
+        Q = FIFOQueue__create();
+        quantam = atoi(argv[2]);
     }
-    handlerAndIntial();
+    msq_id = getProcessMessageQueue(KEYSALT);
+    sem_id = getSem(KEYSALT);
+    initRemainingTimeCommunication(true);
+    signal(SIGCHLD, handlerChild);
+    signal(SIGINT, clearIPC);
+    signal(SIGUSR1, handlerUSR1);
+    kill(getppid(), SIGUSR1);
     while (1)
     {
-        if (finished > -1) // clk  started
+        if (finished > -1)
         {
-            insert_all_comming_in_Queue(Queue, type);
-            if (!flag_in_run && processNotFinished(Queue, type))
-                startProcess(Queue, type);
-
-            if (flag_in_run && old_clock < getClk() && type > 0 && read_done)
+            int current_clk = getClk();
+            if (insert_in_Queue(Q) && current_clk > old_clk)
             {
-                printf("enter here old: %d new: %d rem : %d  \n", old_clock, getClk(), current_process->t_remaining);
-                current_process->t_remaining -= (getClk() - old_clock);
-                old_clock = getClk();
-                read_done = false;
-                if (current_process->t_remaining != 0)
-                    if (type == 1 && processNotFinished(Queue, type))
-                        checkComeShortest(Queue, type);
-                    else if (type == 2 && getClk() - run_clock == quantum)
-                        setDateNotFinishedP(Queue, type);
+                old_clk = current_clk;
+                if (run && type == 1 && processNotFinished(Q, type))
+                    STRN(Q);
+                if (run && type == 2 && current_clk == run_clk + quantam && current_process->t_remaining != 0)
+                {
+                    if (!processNotFinished(Q, type))
+                        run_clk = getClk();
+                    else
+                        premtive(Q);
+                }
+                if (!run && processNotFinished(Q, type))
+                    runProcess(Q, type);
+                if (current_process != NULL)
+                {
+                    current_process->t_remaining--;
+                    p_end = false;
+                }
+                while (getClk() == old_clk)
+                    if (p_end && current_process != NULL)
+                    {
+                        current_process->t_remaining--;
+                        p_end = false;
+                    }
             }
         }
     }
+    destroyRemainingTimeCommunication(true);
     destroyClk(false);
+    return 0;
 }
 
-////////////////////////////////function to handle signal /////////////////////
-void handlerAndIntial()
+void handlerChild(int signum)
 {
-    signal(SIGCHLD, handleProcessFinished);
-    signal(SIGUSR1, handlerFromGenerator);
-    signal(SIGINT, clearIPC);
-    msg_q_id = getProcessMessageQueue(KEYSALT);
-    sem_id = getSem(KEYSALT);
-    printf("Recieved queue with id %d\n", msg_q_id);
-    kill(getppid(), SIGUSR1);
+    if (change_child == 0)
+        finishedProcess();
+    else
+        change_child--;
+    signal(SIGCHLD, handlerChild);
 }
 
-void handlerFromGenerator(int signum)
+void clearIPC(int signum)
+{
+    destroyRemainingTimeCommunication(true);
+    destroyClk(false);
+    exit(0);
+    signal(SIGINT, clearIPC);
+}
+
+void handlerUSR1(int signum)
 {
     finished++;
     if (finished == 0)
         initClk();
-    signal(SIGUSR1, handlerFromGenerator);
+    signal(SIGUSR1, handlerUSR1);
 }
 
-void handleProcessFinished(int signum)
+bool insert_in_Queue(void *PQ)
 {
-    if (chang_in_child)
-        chang_in_child = false;
-    else
-        setFinishedProcesss();
-    signal(SIGCHLD, handleProcessFinished);
-}
-void clearIPC(int signum)
-{
-    destroyClk(false);
-    exit(0);
-}
-//////////////////// for SRTN ///////////////////////
-void checkComeShortest(void *PQ, int type)
-{
-    PCB *process = PriorityQueue__peek(PQ);
-    if (process->t_remaining < current_process->t_remaining)
-        setDateNotFinishedP(PQ, type);
-}
-////////////////////////for HPF SRTN ////////////////////////////////
-void startProcess(void *PQ, int type)
-{
-    if (type != 2)
-        current_process = PriorityQueue__pop(PQ);
-    else
-        current_process = FIFOQueue__pop(PQ);
-    flag_in_run = true;
-    old_clock = getClk();
-    run_clock = getClk();
-    read_done = false;
-    if (current_process->actual_pid == -1)
+    int f = finished;
+    int sem_state = __down(sem_id);
+    if (sem_state != -1)
     {
-        current_process->t_st = getClk();
-        current_process->actual_pid = createChild("./process.out", current_process->t_remaining, current_process->p_data.pid);
-    }
-    else
-    {
-        chang_in_child = true;
-        kill(current_process->actual_pid, SIGCONT);
-        //out file & update data
-    }
-}
-
-void insert_all_comming_in_Queue(void *PQ, int type)
-{
-    if (__down(sem_id) != -1)
-    {
-        read_done = true;
-        if (finished != 2)
+        int pid = 0;
+        while (pid != -1)
         {
-            int pid = 0;
-            while (pid != -1)
+            ProcessData recievedProcess = recieveProcessMessage(msq_id, SCHEDULER_TYPE);
+            pid = recievedProcess.pid;
+            if (pid != -1)
             {
-                ProcessData recievedProcess = recieveProcessMessage(msg_q_id, SCHEDULER_TYPE);
-                pid = recievedProcess.pid;
-                if (pid != -1)
+                PCB *process = PCB__create(recievedProcess, recievedProcess.t_running, -1, -1, IDLE, -1, -1);
+                if (type == 0)
                 {
-                    PCB *process = PCB__create(recievedProcess, recievedProcess.t_running, -1, -1, IDLE, -1, -1);
-                    if (type == 0)
-                    {
-                        long long p = recievedProcess.priority;
-                        p <<= 32;
-                        p |= (-1 * recievedProcess.t_arrival) & 0xFFFFFFFF;
-                        PriorityQueue__push(PQ, process, p);
-                    }
-                    else if (type == 1) ///sRTN
-                        PriorityQueue__push(PQ, process, -1 * recievedProcess.t_running);
-                    else if (type == 2)
-                        FIFOQueue__push(PQ, process);
+                    long long p = recievedProcess.priority;
+                    p <<= 32;
+                    p |= (-1 * recievedProcess.t_arrival) & 0xFFFFFFFF;
+                    PriorityQueue__push(PQ, process, p);
                 }
+                else if (type == 1) ///sRTN
+                    PriorityQueue__push(PQ, process, -1 * recievedProcess.t_running);
+                else if (type == 2)
+                    FIFOQueue__push(PQ, process);
             }
-            if (finished == 1)
-                finished = 2;
         }
+        return true;
     }
-}
-///////////////////////////////function for all algorithim////////////////////////////////
-void setFinishedProcesss()
-{
-    flag_in_run = false;
-    current_process->t_remaining = 0;
-    printf("Process %d real %d finished at %d\n", current_process->p_data.pid, current_process->actual_pid, getClk());
-    PCB__destroy(current_process);
-    current_process = NULL;
+    if (f == 1 && sem_state == -1)
+        return true;
+    return false;
 }
 
 bool processNotFinished(void *q, int type)
@@ -176,16 +141,71 @@ bool processNotFinished(void *q, int type)
     return !FIFOQueue__isEmpty(q);
 }
 
-void setDateNotFinishedP(void *q, int type)
+void runProcess(void *Q, int type)
 {
-    current_process->state = STOPPED;
-    printf("Process %d real %d switch at %d\n", current_process->p_data.pid, current_process->actual_pid, getClk());
-    chang_in_child = true;
-    kill(current_process->actual_pid, SIGSTOP);
-    flag_in_run = false;
-    if (type != 2)
-        PriorityQueue__push(q, current_process, -1 * current_process->t_remaining);
+    if (type < 2)
+        current_process = PriorityQueue__pop(Q);
     else
-        FIFOQueue__push(q, current_process);
+        current_process = FIFOQueue__pop(Q);
+    run = true;
+    run_clk = getClk();
+    if (current_process->actual_pid == -1)
+    {
+        current_process->t_st = getClk();
+        current_process->actual_pid = createChild("./process.out", current_process->t_remaining, current_process->p_data.pid);
+    }
+    else
+    {
+        setRemainingTime(current_process->t_remaining);
+        change_child++;
+        kill(current_process->actual_pid, SIGCONT);
+        printf("p id %d real %d in %d with rem %d\n", current_process->p_data.pid, current_process->actual_pid, getClk(), current_process->t_remaining);
+    }
 }
-////////////////////////////////////////////////////////////
+
+void finishedProcess()
+{
+    run = false;
+    if (current_process != NULL)
+    {
+        current_process->t_remaining = 0;
+        printf("Process %d real %d finished at %d\n", current_process->p_data.pid, current_process->actual_pid, getClk());
+        PCB__destroy(current_process);
+        current_process = NULL;
+        p_end = true;
+        if (processNotFinished(Q, type))
+            runProcess(Q, type);
+    }
+}
+void STRN(PriorityQueue *Q)
+{
+    if (current_process != NULL)
+    {
+        PCB *process = PriorityQueue__peek(Q);
+        //printf("new process %d current process %d \n", process->t_remaining, current_process->t_remaining);
+        if (process->t_remaining < current_process->t_remaining)
+        {
+            premtive(Q);
+        }
+    }
+}
+void premtive(void *Q)
+{
+    if (current_process != NULL)
+    {
+        change_child++;
+        run = false;
+        current_process->state = STOPPED;
+        // set another data in output file
+        printf(" process %d stopped at %d \n", current_process->p_data.pid, getClk());
+        if (type != 2)
+            PriorityQueue__push(Q, current_process, -1 * current_process->t_remaining);
+        else
+            FIFOQueue__push(Q, current_process);
+        int pid = current_process->actual_pid;
+        current_process = NULL;
+        kill(pid, SIGSTOP);
+        if (processNotFinished(Q, type))
+            runProcess(Q, type);
+    }
+}

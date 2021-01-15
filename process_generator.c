@@ -13,6 +13,7 @@ int msg_q_id, sem_id, schPid;
 
 void initiateClock(int signum)
 {
+    // sleep(10);
     int clkPid = createChild("./clk.out", 0, 0);
     // Init clock shared memory
     initClk();

@@ -57,13 +57,11 @@ int main(int agrc, char *argv[])
             if (!stop)
             {
                 remainingtime -= 1;
-                printf("now decrease clk %d od clk %d cur clk %d in pid %d \n", remainingtime, old_clock, cur_clock, getpid());
             }
         }
         // Update clocks
         old_clock = cur_clock;
     }
-    printf("end process now  %d at %d \n", atoi(argv[2]), getClk());
     destroyRemainingTimeCommunication(false);
     destroyClk(false);
     return 0;

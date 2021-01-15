@@ -12,8 +12,10 @@
 /**
  * Enumerating process state
 */
-typedef enum pstate {
-    RUNNING,
+typedef enum pstate
+{
+    STARTED,
+    RESUMED,
     STOPPED,
     FINISHED,
     IDLE
@@ -40,8 +42,9 @@ typedef struct ProcessData
  * @param prior Priority index
  * @return Pointer to the created ProcessData Instance
 */
-ProcessData* ProcessData__create(int pid, int t_arr, int t_run, int prior) {
-    ProcessData* pd = (ProcessData*) malloc(sizeof(ProcessData));
+ProcessData *ProcessData__create(int pid, int t_arr, int t_run, int prior)
+{
+    ProcessData *pd = (ProcessData *)malloc(sizeof(ProcessData));
     pd->pid = pid;
     pd->t_arrival = t_arr;
     pd->t_running = t_run;
@@ -55,7 +58,8 @@ ProcessData* ProcessData__create(int pid, int t_arr, int t_run, int prior) {
  * 
  * @param pd Pointer to ProcessData
 */
-void ProcessData__print(ProcessData* pd) {
+void ProcessData__print(ProcessData *pd)
+{
     printf("%d\t%d\t%d\t%d\n", pd->pid, pd->t_arrival, pd->t_running, pd->priority);
 }
 
@@ -64,12 +68,14 @@ void ProcessData__print(ProcessData* pd) {
  * 
  * @param pd Pointer to ProcessData memory location
 */
-void ProcessData__destroy(ProcessData* pd) {
-    if (pd != (ProcessData*) -1 && pd != NULL)
+void ProcessData__destroy(ProcessData *pd)
+{
+    if (pd != (ProcessData *)-1 && pd != NULL)
         free(pd);
 }
 
-ProcessData NULL_PROCESS_DATA() {
+ProcessData NULL_PROCESS_DATA()
+{
     ProcessData pd;
     pd.pid = -1;
     return pd;
@@ -121,8 +127,9 @@ PCB *PCB__create(ProcessData p_data, int t_r, int t_w, int t_ta, pstate state, i
  * 
  * @param pcb Pointer to PCB memory location
 */
-void PCB__destroy(PCB* pcb) {
-    if (pcb != (PCB*) -1 && pcb != NULL)
+void PCB__destroy(PCB *pcb)
+{
+    if (pcb != (PCB *)-1 && pcb != NULL)
         free(pcb);
 }
 //======= end PCB =========================
@@ -131,17 +138,19 @@ void PCB__destroy(PCB* pcb) {
 /**
  * Node of a linkedlist
 */
-typedef struct Node {
-    void* val;
-    struct Node* next;
+typedef struct Node
+{
+    void *val;
+    struct Node *next;
 } Node;
 
 /**
  * Linkedlist-implemented FIFOQueue
 */
-typedef struct FIFOQueue {
-    Node* head;
-    Node* tail;
+typedef struct FIFOQueue
+{
+    Node *head;
+    Node *tail;
 } FIFOQueue;
 
 /**
@@ -149,8 +158,9 @@ typedef struct FIFOQueue {
  * 
  * @return pointer to FIFOQueue Instance
 */
-FIFOQueue* FIFOQueue__create() {
-    FIFOQueue* fq = (FIFOQueue*) malloc(sizeof(FIFOQueue));
+FIFOQueue *FIFOQueue__create()
+{
+    FIFOQueue *fq = (FIFOQueue *)malloc(sizeof(FIFOQueue));
     fq->head = NULL;
     fq->tail = NULL;
 
@@ -163,8 +173,10 @@ FIFOQueue* FIFOQueue__create() {
  * @param fq Pointer to FIFOQueue instance to peak
  * @return pointer to val
 */
-void* FIFOQueue__peek(FIFOQueue* fq) {
-    if (fq->head == NULL) return NULL;
+void *FIFOQueue__peek(FIFOQueue *fq)
+{
+    if (fq->head == NULL)
+        return NULL;
     return fq->head->val;
 }
 
@@ -174,23 +186,26 @@ void* FIFOQueue__peek(FIFOQueue* fq) {
  * @param fq Pointer to FIFOQueue instance to peak
  * @return pointer to val
 */
-void* FIFOQueue__pop(FIFOQueue* fq) {
+void *FIFOQueue__pop(FIFOQueue *fq)
+{
     // Case 0 : Empty LL
-    if (fq->head == NULL) return NULL;
-    void* val = fq->head->val;
+    if (fq->head == NULL)
+        return NULL;
+    void *val = fq->head->val;
 
     // Case 1 : last element
-    if (fq->head == fq->tail) {
+    if (fq->head == fq->tail)
+    {
         free(fq->head);
         fq->head = NULL;
         fq->tail = NULL;
         return val;
     }
-    
+
     // Ordinary Case
-    Node* tmp = fq->head;
+    Node *tmp = fq->head;
     fq->head = fq->head->next;
-    
+
     free(tmp);
     return val;
 }
@@ -201,38 +216,44 @@ void* FIFOQueue__pop(FIFOQueue* fq) {
  * @param fq Pointer to FIFOQueue instance to peak
  * @param val pointer to new val
 */
-void FIFOQueue__push(FIFOQueue* fq, void* val) {
-    Node* nd = (Node*) malloc(sizeof(Node));
+void FIFOQueue__push(FIFOQueue *fq, void *val)
+{
+    Node *nd = (Node *)malloc(sizeof(Node));
     nd->val = val;
     nd->next = NULL;
-    if (fq->tail != NULL) fq->tail->next = nd;
+    if (fq->tail != NULL)
+        fq->tail->next = nd;
     fq->tail = nd;
-    
+
     // If the Queue is initially empty
-    if (fq->head == NULL) fq->head = nd;
+    if (fq->head == NULL)
+        fq->head = nd;
 }
 
 /**
  * Return whether the queue is empty
 */
-ushort FIFOQueue__isEmpty(FIFOQueue* fq) {
+ushort FIFOQueue__isEmpty(FIFOQueue *fq)
+{
     return (fq->head == NULL);
 }
 //======= end FIFOQueue ===========================
 
 //======= begin PriorityQueue =========================
-static inline int parent(int i) { return i>>1; }
-static inline int leftChild(int i) { return (i<<1); }
-static inline int rightChild(int i) { return (i<<1)+1; }
+static inline int parent(int i) { return i >> 1; }
+static inline int leftChild(int i) { return (i << 1); }
+static inline int rightChild(int i) { return (i << 1) + 1; }
 static inline ushort isLeaf(int idx, int sz) { return ((leftChild(idx) > sz)); }
 
-typedef struct PriorityItem {
-    void* val;
+typedef struct PriorityItem
+{
+    void *val;
     long long priority;
 } PriorityItem;
 
-void PriorityItem__swap(PriorityItem* pit1, PriorityItem* pit2) {
-    PriorityItem* pit_tmp = (PriorityItem*) malloc(sizeof(PriorityItem));
+void PriorityItem__swap(PriorityItem *pit1, PriorityItem *pit2)
+{
+    PriorityItem *pit_tmp = (PriorityItem *)malloc(sizeof(PriorityItem));
     memcpy(pit_tmp, pit1, sizeof(PriorityItem));
     pit1->val = pit2->val;
     pit1->priority = pit2->priority;
@@ -243,70 +264,80 @@ void PriorityItem__swap(PriorityItem* pit1, PriorityItem* pit2) {
     free(pit_tmp);
 }
 
-typedef struct PriorityQueue {
-    struct PriorityItem** heap;
+typedef struct PriorityQueue
+{
+    struct PriorityItem **heap;
     int size;
 } PriorityQueue;
 
-void __maxHeapify(PriorityQueue* pq, int idx) {
-    if (isLeaf(idx, pq->size)) return;
+void __maxHeapify(PriorityQueue *pq, int idx)
+{
+    if (isLeaf(idx, pq->size))
+        return;
 
     PriorityItem *cur = pq->heap[idx], *left = pq->heap[leftChild(idx)], *right = (rightChild(idx) <= pq->size) ? pq->heap[rightChild(idx)] : NULL;
-    
+
     if (
         cur->priority < left->priority ||
-        (right != NULL && cur->priority < right->priority)
-    ) {
+        (right != NULL && cur->priority < right->priority))
+    {
         // Choose the greater for swapping
-        PriorityItem* grtr = (right != NULL && (right->priority > left->priority)) ? right : left;
+        PriorityItem *grtr = (right != NULL && (right->priority > left->priority)) ? right : left;
         int grtr_idx = (right != NULL && (right->priority > left->priority)) ? rightChild(idx) : leftChild(idx);
-        
+
         // Swap and recurse
         PriorityItem__swap(cur, grtr);
         __maxHeapify(pq, grtr_idx);
     }
 }
 
-PriorityQueue* PriorityQueue__create(int max_sz) {
-    PriorityQueue* pq = (PriorityQueue*) malloc(sizeof(PriorityQueue));
-    pq->heap = (PriorityItem**) malloc(sizeof(PriorityItem*) * (max_sz + 5));
-    pq->heap[0] = (PriorityItem*) malloc(sizeof(PriorityItem));
-    pq->heap[0]->val = NULL; pq->heap[0]->priority = __INT64_MAX__;
+PriorityQueue *PriorityQueue__create(int max_sz)
+{
+    PriorityQueue *pq = (PriorityQueue *)malloc(sizeof(PriorityQueue));
+    pq->heap = (PriorityItem **)malloc(sizeof(PriorityItem *) * (max_sz + 5));
+    pq->heap[0] = (PriorityItem *)malloc(sizeof(PriorityItem));
+    pq->heap[0]->val = NULL;
+    pq->heap[0]->priority = __INT64_MAX__;
     pq->size = 0;
     return pq;
 }
 
-void ____printHeap(PriorityQueue* pq) {
+void ____printHeap(PriorityQueue *pq)
+{
     printf("\n");
-    for (int i = 1; i <= pq->size; ++i) printf("%lld ", pq->heap[i]->priority);
+    for (int i = 1; i <= pq->size; ++i)
+        printf("%lld ", pq->heap[i]->priority);
     printf("\n");
 }
 
-void PriorityQueue__push(PriorityQueue* pq, void* val, long long prior) {
+void PriorityQueue__push(PriorityQueue *pq, void *val, long long prior)
+{
     // Create the node
-    PriorityItem* pit = (PriorityItem*) malloc(sizeof(PriorityItem));
+    PriorityItem *pit = (PriorityItem *)malloc(sizeof(PriorityItem));
     pit->val = val;
     pit->priority = prior;
 
     // Place it to the end of the heap
     pq->heap[++pq->size] = pit;
 
-    
     // Fix max heap
     int cur_idx = pq->size;
-    while (pq->heap[cur_idx]->priority > pq->heap[parent(cur_idx)]->priority) {
+    while (pq->heap[cur_idx]->priority > pq->heap[parent(cur_idx)]->priority)
+    {
         PriorityItem__swap(pq->heap[cur_idx], pq->heap[parent(cur_idx)]);
         cur_idx = parent(cur_idx);
     }
     // ____printHeap(pq);
 }
 
-void* PriorityQueue__peek(PriorityQueue* pq) {
+void *PriorityQueue__peek(PriorityQueue *pq)
+{
     return pq->heap[1]->val;
 }
 
-void* PriorityQueue__pop(PriorityQueue* pq) {
-    void* retval = pq->heap[1]->val;
+void *PriorityQueue__pop(PriorityQueue *pq)
+{
+    void *retval = pq->heap[1]->val;
 
     // Swap head and tail
     pq->heap[1]->val = pq->heap[pq->size]->val;
@@ -317,17 +348,24 @@ void* PriorityQueue__pop(PriorityQueue* pq) {
     pq->size--;
 
     // Fix heap
-    if (pq->size) __maxHeapify(pq, 1);
+    if (pq->size)
+        __maxHeapify(pq, 1);
 
     return retval;
 }
 
-ushort PriorityQueue__isEmpty(PriorityQueue* pq) {
+ushort PriorityQueue__isEmpty(PriorityQueue *pq)
+{
     return pq->size == 0;
 }
 
-void PriorityQueue__destroy(PriorityQueue* pq) {
-    for (int i = 0; i < pq->size; ++i) { free(pq->heap[i]->val); free(pq->heap[i]); }
+void PriorityQueue__destroy(PriorityQueue *pq)
+{
+    for (int i = 0; i < pq->size; ++i)
+    {
+        free(pq->heap[i]->val);
+        free(pq->heap[i]);
+    }
     free(pq->heap);
     free(pq);
 }

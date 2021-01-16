@@ -1,3 +1,4 @@
+#pragma once
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +15,7 @@ static inline int lvlSz(int lvl) { return (1 << (10 - lvl)); }
 // MISS. MEMORY !
 ushort M[MEM_LEVELS][MAX_NO_OF_ELEMENTS_PER_LEVEL];
 
-int size_of_level[MEM_LEVELS] = {0};
+int size_of_level[MEM_LEVELS];
 
 void printMem() {
     for (int i = MEM_LEVELS - 1; i > 3; --i) {
@@ -34,6 +35,7 @@ Pair getMemIntervals(Pair mem_pair) {
 
 void initMem() {
     memset(M, MEM_LEVELS*MAX_NO_OF_ELEMENTS_PER_LEVEL, 0);
+    memset(size_of_level, MEM_LEVELS*sizeof(int), 0);
     size_of_level[8] = 4;
     M[8][0] = M[8][1] = M[8][2] = M[8][3] = 1;
 }

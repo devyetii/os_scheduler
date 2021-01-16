@@ -6,6 +6,8 @@
 #include "lib/data_structures.h"
 #include "lib/process_management.h"
 #include "lib/remaining_time.h"
+#include "lib/memory.h"
+
 int sem_id, msq_id, type, finished = -1, old_clk = -1, change_child = 0, run_clk = -1, total_t_w = 0, number_process = 0;
 float total_t_WTA = 0;
 PCB *current_process = NULL;
@@ -13,6 +15,7 @@ bool run = false, p_end = false;
 void *Q;
 FIFOQueue *t_w;
 FILE *schedulerLog;
+FILE *memLog;
 
 void intials();
 void handlerChild(int signum);
@@ -131,7 +134,7 @@ bool insert_in_Queue(void *PQ)
                 {
                     long long p = recievedProcess.priority;
                     p <<= 32;
-                    p |= (-1 * recievedProcess.t_arrival) & 0xFFFFFFFF;
+                    p |= (-1 * recievedProcess.t_running) & 0xFFFFFFFF;
                     PriorityQueue__push(PQ, process, p);
                 }
                 else if (type == 1) ///sRTN
@@ -164,10 +167,14 @@ void runProcess(void *Q, int type)
     run_clk = getClk();
     if (current_process->actual_pid == -1)
     {
-
-        current_process->t_st = getClk();
-        current_process->actual_pid = createChild("./process.out", current_process->t_remaining, current_process->p_data.pid);
-        writeInLog(STARTED);
+        if (canAllocate(current_process->p_data.p_size) == 1) {
+            printf("I can\n");
+            current_process->mem_pair = allocate(current_process->p_data.p_size);
+            current_process->t_st = getClk();
+            current_process->actual_pid = createChild("./process.out", current_process->t_remaining, current_process->p_data.pid);
+            writeInLog(STARTED);
+            writeMemLog(memLog, current_process->t_st, current_process, 1 /*allocate*/);
+        }
     }
     else
     {
@@ -186,6 +193,8 @@ void finishedProcess()
     if (current_process != NULL)
     {
         writeInLogTerminate();
+        writeMemLog(memLog, getClk(), current_process, 0 /*freed*/);
+        deallocate(current_process->mem_pair);
         printf("Process %d real %d finished at %d\n", current_process->p_data.pid, current_process->actual_pid, getClk());
         PCB__destroy(current_process);
         current_process = NULL;
@@ -230,6 +239,7 @@ void premtive(void *Q)
 void writeInPerf()
 {
     closeFile(schedulerLog);
+    closeFile(memLog);
     FILE *schedulerPerf = openFile("scheduler.perf", "w");
     float average_w = (float)total_t_w / number_process;
     float average_WTA = (float)total_t_WTA / number_process;
@@ -254,7 +264,10 @@ void writeInLog(int state)
 }
 void intials()
 {
+    // Init memory
+    initMem();
     schedulerLog = openFile("scheduler.log", "w");
+    memLog = openFile("memory.log", "w");
     msq_id = getProcessMessageQueue(KEYSALT);
     sem_id = getSem(KEYSALT);
     initRemainingTimeCommunication(true);

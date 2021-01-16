@@ -5,6 +5,8 @@
 #include "data_structures.h"
 #include <string.h>
 #include <stdbool.h>
+#include <limits.h>
+#include "memory.h"
 /**
  * readProcess
  * 
@@ -106,6 +108,27 @@ void writeProcess(FILE *file, PCB *P, int timestep)
     }
   }
 }
+
+/**
+ * @brief Print Memory log line
+ * 
+ * @param f memory.log file ptr
+ * @param time current time
+ * @param p PCB of the process
+ * @param type Either allocate (1) of free (0)
+ */
+void writeMemLog(FILE* f, int time, PCB* p, bool type) {
+  Pair interval = getMemIntervals(p->mem_pair);
+  fprintf(f, "At time %d %s %d bytes for process %d from %d to %d\n", 
+    time,
+    type ? "allocated" : "freed", 
+    p->p_data.p_size,
+    p->p_data.pid,
+    interval.lower_bound,
+    interval.upper_bound
+  );
+}
+
 /**
  * writeStats
  * 

@@ -21,6 +21,27 @@ typedef enum pstate {
     IDLE
 } pstate;
 
+//========= begin basic DS ===========
+typedef struct Pair
+{
+    int lower_bound;
+    int upper_bound;
+} Pair;
+
+Pair Pair__create(int lower_bound,int upper_bound)
+{
+    Pair p;
+    p.lower_bound = lower_bound;
+    p.upper_bound = upper_bound;
+    return p;
+}
+
+void Pair__print(Pair p) {
+    printf("(%d, %d)\n", p.lower_bound, p.upper_bound);
+}
+//========= e n d basic DS ===========
+
+
 //========== begin ProcessData =================
 /*
  * Represents Process data read from file
@@ -31,6 +52,7 @@ typedef struct ProcessData
     int t_arrival;
     int t_running;
     int priority;
+    int p_size;
 } ProcessData;
 
 /**
@@ -42,13 +64,13 @@ typedef struct ProcessData
  * @param prior Priority index
  * @return Pointer to the created ProcessData Instance
 */
-ProcessData* ProcessData__create(int pid, int t_arr, int t_run, int prior) {
+ProcessData* ProcessData__create(int pid, int t_arr, int t_run, int prior, int p_size) {
     ProcessData* pd = (ProcessData*) malloc(sizeof(ProcessData));
     pd->pid = pid;
     pd->t_arrival = t_arr;
     pd->t_running = t_run;
     pd->priority = -1 * prior;
-
+    pd->p_size = p_size;
     return pd;
 }
 
@@ -58,7 +80,7 @@ ProcessData* ProcessData__create(int pid, int t_arr, int t_run, int prior) {
  * @param pd Pointer to ProcessData
 */
 void ProcessData__print(ProcessData* pd) {
-    printf("%d\t%d\t%d\t%d\n", pd->pid, pd->t_arrival, pd->t_running, pd->priority);
+    printf("%d\t%d\t%d\t%d\t%d\n", pd->pid, pd->t_arrival, pd->t_running, pd->priority, pd->p_size);
 }
 
 /**
@@ -91,6 +113,7 @@ typedef struct PCB
     int t_st;
     int actual_pid;
     pstate state;
+    Pair mem_pair;
 } PCB;
 
 /**

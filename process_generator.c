@@ -60,7 +60,10 @@ int main(int argc, char *argv[])
     }
 
     schPid = createChild("./scheduler.out", algo, q);
-
+    
+    // Initialize Clock shared memory
+    initClk();
+    
     // Main loop, untill all the processes get sent to the scheduler
     int newClock, oldClock = -1;
     while (!FIFOQueue__isEmpty(fq))

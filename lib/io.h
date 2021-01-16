@@ -18,7 +18,6 @@ ProcessData *readProcess(FILE *file)
   int arrive_time;
   int running_time;
   int priority;
-  int psize;
   ProcessData *process = NULL;
   if (file != NULL)
   {
@@ -31,8 +30,8 @@ ProcessData *readProcess(FILE *file)
       {
         continue;
       }
-      sscanf(line, "%d\t%d\t%d\t%d\t%d\n", &pids, &arrive_time, &running_time, &priority, &psize);
-      process = ProcessData__create(pids, arrive_time, running_time, priority, psize);
+      sscanf(line, "%d\t%d\t%d\t%d\n", &pids, &arrive_time, &running_time, &priority);
+      process = ProcessData__create(pids, arrive_time, running_time, priority);
       found = false;
     }
     return process;

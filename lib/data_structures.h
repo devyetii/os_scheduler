@@ -52,7 +52,6 @@ typedef struct ProcessData
     int t_arrival;
     int t_running;
     int priority;
-    int p_size;
 } ProcessData;
 
 /**
@@ -64,13 +63,12 @@ typedef struct ProcessData
  * @param prior Priority index
  * @return Pointer to the created ProcessData Instance
 */
-ProcessData* ProcessData__create(int pid, int t_arr, int t_run, int prior, int p_size) {
+ProcessData* ProcessData__create(int pid, int t_arr, int t_run, int prior) {
     ProcessData* pd = (ProcessData*) malloc(sizeof(ProcessData));
     pd->pid = pid;
     pd->t_arrival = t_arr;
     pd->t_running = t_run;
     pd->priority = -1 * prior;
-    pd->p_size = p_size;
     return pd;
 }
 
@@ -80,7 +78,7 @@ ProcessData* ProcessData__create(int pid, int t_arr, int t_run, int prior, int p
  * @param pd Pointer to ProcessData
 */
 void ProcessData__print(ProcessData* pd) {
-    printf("%d\t%d\t%d\t%d\t%d\n", pd->pid, pd->t_arrival, pd->t_running, pd->priority, pd->p_size);
+    printf("%d\t%d\t%d\t%d\n", pd->pid, pd->t_arrival, pd->t_running, pd->priority);
 }
 
 /**
@@ -113,7 +111,6 @@ typedef struct PCB
     int t_st;
     int actual_pid;
     pstate state;
-    Pair mem_pair;
 } PCB;
 
 /**

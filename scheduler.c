@@ -16,6 +16,7 @@ void *Q;
 FIFOQueue *t_w;
 FILE *schedulerLog;
 FILE *memLog;
+int total_running = 0;
 
 void intials();
 void handlerChild(int signum);
@@ -27,7 +28,7 @@ void runProcess(void *Q, int type);
 void finishedProcess();
 void STRN(PriorityQueue *Q);
 void premtive(void *Q);
-void writeInPerf();
+void writeInPerf(int lclk);
 void writeInLog(int state);
 void writeInLogTerminate();
 
@@ -45,10 +46,11 @@ int main(int argc, char *argv[])
     }
     intials();
     bool end = false;
+    int current_clk;
     while (run || finished < 1 || processNotFinished(Q, type) || !end)
         if (finished > -1)
         {
-            int current_clk = getClk();
+            current_clk = getClk();
             if (insert_in_Queue(Q) && current_clk > old_clk)
             {
                 old_clk = current_clk;
@@ -82,7 +84,8 @@ int main(int argc, char *argv[])
                     end = true;
             }
         }
-    writeInPerf();
+    printf("Last clock = %d\n", old_clk);
+    writeInPerf(old_clk);
     destroyRemainingTimeCommunication(true);
     destroyClk(false);
     return 0;
@@ -101,7 +104,7 @@ void handlerChild(int signum)
 
 void clearIPC(int signum)
 {
-    writeInPerf();
+    writeInPerf(getClk());
     destroyRemainingTimeCommunication(true);
     destroyClk(false);
     safeExit(-1);
@@ -236,11 +239,12 @@ void premtive(void *Q)
     }
 }
 ///////////////////////////write in files functions //////////////////////////
-void writeInPerf()
+void writeInPerf(int lclk)
 {
     closeFile(schedulerLog);
     closeFile(memLog);
     FILE *schedulerPerf = openFile("scheduler.perf", "w");
+    float utilization = ((float)(total_running + 1) / lclk) * 100.0;
     float average_w = (float)total_t_w / number_process;
     float average_WTA = (float)total_t_WTA / number_process;
     float sum = 0;
@@ -250,7 +254,7 @@ void writeInPerf()
         sum += (*std - average_WTA) * (*std - average_WTA);
     }
     float std_w = sqrtf(sum);
-    writeStats(schedulerPerf, "CPU utilizaton = 100 %s \n", NULL);
+    writeStats(schedulerPerf, "CPU utilizaton = %.2f \%\n", &utilization);
     writeStats(schedulerPerf, "AVG WTA = %.2f\n", &average_WTA);
     writeStats(schedulerPerf, "AVG Waiting = %.2f\n", &average_WTA);
     writeStats(schedulerPerf, "Std WTA = %.2f\n", &std_w);

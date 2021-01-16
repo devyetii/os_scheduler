@@ -19,15 +19,15 @@ ProcessData *readProcess(FILE *file)
   int running_time;
   int priority;
   int psize;
-  ProcessData *process;
+  ProcessData *process = NULL;
   if (file != NULL)
   {
     char line[BUFSIZ];
     bool found = true;
-    while (found && !feof(file))
+    while (found && fgets(line, BUFSIZ, file) != NULL)
     {
-      fgets(line, BUFSIZ, file);
-      if (line[0] == '#')
+      if (line == "") break;
+      if (line[0] == '#' || line[0] == '\n')
       {
         continue;
       }
@@ -35,7 +35,6 @@ ProcessData *readProcess(FILE *file)
       process = ProcessData__create(pids, arrive_time, running_time, priority, psize);
       found = false;
     }
-    //free(line);
     return process;
   }
   return NULL;

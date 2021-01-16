@@ -8,6 +8,9 @@
 
 void clearResources(int signum);
 
+// File ptr
+FILE* f;
+
 // Q+sem for communication with the scheduler
 int msg_q_id, sem_id, schPid;
 
@@ -34,13 +37,15 @@ int main(int argc, char *argv[])
     FIFOQueue *fq = FIFOQueue__create();
 
     // Read the input files.
-    FILE *f = openFile("t.txt", "r");
+    f = openFile("processes.txt", "r");
 
     while (!isEndOfFile(f))
     {
         ProcessData *pd = readProcess(f);
-        ProcessData__print(pd);
-        FIFOQueue__push(fq, pd);
+        if (pd != NULL) {
+            ProcessData__print(pd);
+            FIFOQueue__push(fq, pd);
+        }
     }
 
     // Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
@@ -90,6 +95,7 @@ int main(int argc, char *argv[])
 
     // Kill the system :skull_and_crossbones:
     destroyClk(true);
+    closeFile(f);
 }
 
 void clearResources(int signum)
@@ -97,5 +103,6 @@ void clearResources(int signum)
     deleteProcessMessageQueue(msg_q_id);
     deleteSemSet(sem_id);
     destroyClk(true);
+    closeFile(f);
     safeExit(-1);
 }

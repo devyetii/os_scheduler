@@ -19,9 +19,11 @@
 
 // SEM defines
 #define SEMPERMS 0666
+#define RTSEMKEY 0x256
 
 //======== begin Message Queue methods (specialized for the ProcessData)======
-typedef struct pdata_msg {
+typedef struct pdata_msg
+{
     long mtype;
     ProcessData pdata;
 } pdata_msg;
@@ -35,7 +37,6 @@ int getProcessMessageQueue(int key_salt) {
         perror(errtxt);
         safeExit(-1);
     }
-    return msgq_id;
 }
 
 pdata_msg createProcessMessage(int type, ProcessData pdata) {

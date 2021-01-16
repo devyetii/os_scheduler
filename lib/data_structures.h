@@ -16,6 +16,8 @@ typedef enum pstate {
     RUNNING,
     STOPPED,
     FINISHED,
+    RESUMED,
+    STARTED,    
     IDLE
 } pstate;
 

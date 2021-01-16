@@ -1,105 +1,282 @@
 #include "lib/clock.h"
 #include "lib/ipc.h"
+#include <stdio.h>
+#include <math.h>
+#include "lib/io.h"
 #include "lib/data_structures.h"
 #include "lib/process_management.h"
 #include "lib/remaining_time.h"
+int sem_id, msq_id, type, finished = -1, old_clk = -1, change_child = 0, run_clk = -1, total_t_w = 0, number_process = 0;
+float total_t_WTA = 0;
+PCB *current_process = NULL;
+bool run = false, p_end = false;
+void *Q;
+FIFOQueue *t_w;
+FILE *schedulerLog;
 
+void intials();
+void handlerChild(int signum);
+void clearIPC(int signum);
+void handlerUSR1(int signum);
+bool insert_in_Queue(void *PQ);
+bool processNotFinished(void *q, int type);
+void runProcess(void *Q, int type);
+void finishedProcess();
+void STRN(PriorityQueue *Q);
+void premtive(void *Q);
+void writeInPerf();
+void writeInLog(int state);
+void writeInLogTerminate();
 
-int msg_q_id, sem_id;
-
-bool finished = false;    
-
-FIFOQueue* fq;
-
-PCB* process_in_progress = NULL;
-
-bool process_finished = false;
-
-int cur_clock;
-
-void handler(int signum) {
-    finished = true;
-}
-
-// Handle process finishing
-void handleProcessFinished(int signum) {
-    int* status;
-    int pid = wait(status);
-
-    printf("Process %d finished at %d\n", process_in_progress->p_data.pid, cur_clock);
-
-    // TODO :: PRINTING AND STATISTICS
-    
-    PCB__destroy(process_in_progress);
-
-    process_in_progress = NULL;
-}
-
-int main(int argc, char * argv[])
+///////////////////////////////////////////////////////
+int main(int argc, char *argv[])
 {
-    initClk();
-
-    // Sent by the process_generator when it finishes all processes
-    signal(SIGCHLD, handleProcessFinished);
-    signal(SIGUSR1, handler);
-
-    // Init q
-    msg_q_id = getProcessMessageQueue(KEYSALT);
-    sem_id = getSem(KEYSALT);
-
-    // Init shared memory for remaining time
-    initRemainingTimeCommunication(true /* i.e. the creator */);
-
-    fq = FIFOQueue__create();
-
-    // Looop
-    int old_clock = getClk();
-    while (1)
+    int quantam;
+    type = atoi(argv[1]);
+    if (type < 2)
+        Q = PriorityQueue__create(10000);
+    else
     {
-        // Handeling Message comming from process_generator
-        
-        if (__down(sem_id) != -1) {
-            ProcessData recievedProcess = recieveProcessMessage(msg_q_id, SCHEDULER_TYPE);
-            while (recievedProcess.pid != -1) {
-                ProcessData__print(&recievedProcess);
-
-                // create the PCB
-                PCB* p = PCB__create(recievedProcess, recievedProcess.t_running, 0, IDLE);
-                
-                // Push it to the q (depending on the algorithm)
-                FIFOQueue__push(fq, p);
-
-                recievedProcess = recieveProcessMessage(msg_q_id, SCHEDULER_TYPE);
-            }
-        }
-        
-        // Update clock
-        cur_clock = getClk();
-
-        // process processes in case of clock updated and no on-going process
-        if (cur_clock > old_clock && process_in_progress == NULL && !FIFOQueue__isEmpty(fq)) {
-            PCB* p = FIFOQueue__peek(fq);
-            if (p->p_data.t_arrival <= cur_clock) {     // (<) just for saftey
-
-                // Update process in progress
-                FIFOQueue__pop(fq);
-                process_in_progress = p;
-                p->state = 0;
-
-                // TODO :: WRITING AND STATS
-
-                // Fire the process
-                createChild("./process.out", p->t_remaining, 0);
-                printf("Scheduler fired process %d at %d\n", p->p_data.pid, cur_clock);
-            }
-        }
-
-        // When to exit
-        if (finished && process_in_progress == NULL && FIFOQueue__isEmpty(fq)) break;
-        // Save latest clock
-        old_clock = cur_clock;
+        Q = FIFOQueue__create();
+        quantam = atoi(argv[2]);
     }
-
-    destroyRemainingTimeCommunication(true /* i.e. the creator */);
+    intials();
+    bool end = false;
+    while (run || finished < 1 || processNotFinished(Q, type) || !end)
+        if (finished > -1)
+        {
+            int current_clk = getClk();
+            if (insert_in_Queue(Q) && current_clk > old_clk)
+            {
+                old_clk = current_clk;
+                if (run && type == 1 && processNotFinished(Q, type))
+                    STRN(Q);
+                if (run && type == 2 && current_clk == run_clk + quantam && current_process->t_remaining != 0)
+                {
+                    if (!processNotFinished(Q, type))
+                    {
+                        run_clk = getClk();
+                        writeInLog(STOPPED);
+                        writeInLog(RESUMED);
+                    }
+                    else
+                        premtive(Q);
+                }
+                if (!run && processNotFinished(Q, type))
+                    runProcess(Q, type);
+                if (current_process != NULL)
+                {
+                    current_process->t_remaining--;
+                    p_end = false;
+                }
+                while (getClk() == old_clk)
+                    if (p_end && current_process != NULL)
+                    {
+                        current_process->t_remaining--;
+                        p_end = false;
+                    }
+                if (!run && finished == 1 && !processNotFinished(Q, type))
+                    end = true;
+            }
+        }
+    writeInPerf();
+    destroyRemainingTimeCommunication(true);
     destroyClk(false);
+    return 0;
+}
+
+//////////////////////////function defenations //////////////////////
+
+void handlerChild(int signum)
+{
+    if (change_child == 0)
+        finishedProcess();
+    else
+        change_child--;
+    signal(SIGCHLD, handlerChild);
+}
+
+void clearIPC(int signum)
+{
+    writeInPerf();
+    destroyRemainingTimeCommunication(true);
+    destroyClk(false);
+    safeExit(-1);
+    signal(SIGINT, clearIPC);
+}
+
+void handlerUSR1(int signum)
+{
+    finished++;
+    if (finished == 0)
+        initClk();
+    signal(SIGUSR1, handlerUSR1);
+}
+
+bool insert_in_Queue(void *PQ)
+{
+    int f = finished;
+    int sem_state = __down(sem_id);
+    if (sem_state != -1)
+    {
+        int pid = 0;
+        while (pid != -1)
+        {
+            ProcessData recievedProcess = recieveProcessMessage(msq_id, SCHEDULER_TYPE);
+            pid = recievedProcess.pid;
+            if (pid != -1)
+            {
+                PCB *process = PCB__create(recievedProcess, recievedProcess.t_running, -1, -1, IDLE, -1, -1);
+                if (type == 0)
+                {
+                    long long p = recievedProcess.priority;
+                    p <<= 32;
+                    p |= (-1 * recievedProcess.t_arrival) & 0xFFFFFFFF;
+                    PriorityQueue__push(PQ, process, p);
+                }
+                else if (type == 1) ///sRTN
+                    PriorityQueue__push(PQ, process, -1 * recievedProcess.t_running);
+                else if (type == 2)
+                    FIFOQueue__push(PQ, process);
+            }
+        }
+        return true;
+    }
+    if (f == 1 && sem_state == -1)
+        return true;
+    return false;
+}
+
+bool processNotFinished(void *q, int type)
+{
+    if (type != 2)
+        return !PriorityQueue__isEmpty(q);
+    return !FIFOQueue__isEmpty(q);
+}
+
+void runProcess(void *Q, int type)
+{
+    if (type < 2)
+        current_process = PriorityQueue__pop(Q);
+    else
+        current_process = FIFOQueue__pop(Q);
+    run = true;
+    run_clk = getClk();
+    if (current_process->actual_pid == -1)
+    {
+
+        current_process->t_st = getClk();
+        current_process->actual_pid = createChild("./process.out", current_process->t_remaining, current_process->p_data.pid);
+        writeInLog(STARTED);
+    }
+    else
+    {
+        setRemainingTime(current_process->t_remaining);
+        change_child++;
+        current_process->state = RESUMED;
+        kill(current_process->actual_pid, SIGCONT);
+        writeInLog(RESUMED);
+        printf("p id %d real %d in %d with rem %d\n", current_process->p_data.pid, current_process->actual_pid, getClk(), current_process->t_remaining);
+    }
+}
+
+void finishedProcess()
+{
+    run = false;
+    if (current_process != NULL)
+    {
+        writeInLogTerminate();
+        printf("Process %d real %d finished at %d\n", current_process->p_data.pid, current_process->actual_pid, getClk());
+        PCB__destroy(current_process);
+        current_process = NULL;
+        p_end = true;
+        if (processNotFinished(Q, type))
+            runProcess(Q, type);
+    }
+}
+void STRN(PriorityQueue *Q)
+{
+    if (current_process != NULL)
+    {
+        PCB *process = PriorityQueue__peek(Q);
+        //printf("new process %d current process %d \n", process->t_remaining, current_process->t_remaining);
+        if (process->t_remaining < current_process->t_remaining)
+        {
+            premtive(Q);
+        }
+    }
+}
+void premtive(void *Q)
+{
+    if (current_process != NULL)
+    {
+        change_child++;
+        run = false;
+        writeInLog(STOPPED);
+        // set another data in output file
+        printf(" process %d stopped at %d \n", current_process->p_data.pid, getClk());
+        if (type != 2)
+            PriorityQueue__push(Q, current_process, -1 * current_process->t_remaining);
+        else
+            FIFOQueue__push(Q, current_process);
+        int pid = current_process->actual_pid;
+        current_process = NULL;
+        kill(pid, SIGSTOP);
+        if (processNotFinished(Q, type))
+            runProcess(Q, type);
+    }
+}
+///////////////////////////write in files functions //////////////////////////
+void writeInPerf()
+{
+    closeFile(schedulerLog);
+    FILE *schedulerPerf = openFile("scheduler.perf", "w");
+    float average_w = (float)total_t_w / number_process;
+    float average_WTA = (float)total_t_WTA / number_process;
+    float sum = 0;
+    while (!FIFOQueue__isEmpty(t_w))
+    {
+        float *std = FIFOQueue__pop(t_w);
+        sum += (*std - average_WTA) * (*std - average_WTA);
+    }
+    float std_w = sqrtf(sum);
+    writeStats(schedulerPerf, "CPU utilizaton = 100 %s \n", NULL);
+    writeStats(schedulerPerf, "AVG WTA = %.2f\n", &average_WTA);
+    writeStats(schedulerPerf, "AVG Waiting = %.2f\n", &average_WTA);
+    writeStats(schedulerPerf, "Std WTA = %.2f\n", &std_w);
+    closeFile(schedulerPerf);
+}
+void writeInLog(int state)
+{
+    current_process->state = state;
+    current_process->t_w = getClk() - (current_process->p_data.t_running - current_process->t_remaining + current_process->p_data.t_arrival);
+    writeProcess(schedulerLog, current_process, getClk());
+}
+void intials()
+{
+    schedulerLog = openFile("scheduler.log", "w");
+    msq_id = getProcessMessageQueue(KEYSALT);
+    sem_id = getSem(KEYSALT);
+    initRemainingTimeCommunication(true);
+    signal(SIGCHLD, handlerChild);
+    signal(SIGINT, clearIPC);
+    signal(SIGSEGV, clearIPC);
+    signal(SIGUSR1, handlerUSR1);
+    t_w = FIFOQueue__create();
+    kill(getppid(), SIGUSR1);
+}
+void writeInLogTerminate()
+{
+    current_process->t_remaining = 0;
+    current_process->state = FINISHED;
+    current_process->t_w = getClk() - (current_process->p_data.t_running - current_process->t_remaining + current_process->p_data.t_arrival);
+    current_process->t_ta = getClk() - current_process->p_data.t_arrival;
+    writeProcess(schedulerLog, current_process, getClk());
+    total_t_w += current_process->t_w;
+    float nearest = current_process->t_ta / (float)current_process->p_data.t_running;
+    total_t_WTA += nearest;
+    float *t = (float *)malloc(sizeof(float));
+    *t = nearest;
+    FIFOQueue__push(t_w, t);
+    number_process++;
 }

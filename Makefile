@@ -6,12 +6,17 @@ build:
 	gcc test_generator.c -o test_generator.out
 
 clean:
+	ipcrm -a
+	pkill -f clk.out
 	rm -f *.out
 
 all: clean build
 
 run:
+	ipcrm -a
+	pkill -f clk.out
 	./process_generator.out
+
 memtest:
 	rm -f try
 	gcc -o try try.c

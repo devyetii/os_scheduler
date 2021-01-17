@@ -17,6 +17,7 @@ FIFOQueue *t_w;
 FILE *schedulerLog;
 FILE *memLog;
 int total_running = 0;
+PriorityQueue* waiting_for_mem;
 
 void intials();
 void handlerChild(int signum);
@@ -84,7 +85,6 @@ int main(int argc, char *argv[])
                     end = true;
             }
         }
-    printf("Last clock = %d\n", old_clk);
     writeInPerf(old_clk);
     destroyRemainingTimeCommunication(true);
     destroyClk(false);
@@ -140,10 +140,25 @@ bool insert_in_Queue(void *PQ)
                     p |= (-1 * recievedProcess.t_running) & 0xFFFFFFFF;
                     PriorityQueue__push(PQ, process, p);
                 }
-                else if (type == 1) ///sRTN
-                    PriorityQueue__push(PQ, process, -1 * recievedProcess.t_running);
-                else if (type == 2)
-                    FIFOQueue__push(PQ, process);
+                else if (type == 1) ///SRTN
+                    if (
+                        !canAllocate(recievedProcess.p_size) || /* Cannot be allocated in memory */
+                        (current_process != NULL) && ((current_process->t_remaining - 1) < recievedProcess.t_running) /* NOT Better than the running process */
+                    ) {
+                        PriorityQueue__push(waiting_for_mem, process, -1 * recievedProcess.t_running);
+                    }
+                    else {
+                        process->mem_pair = allocate(process->p_data.p_size);
+                        PriorityQueue__push(PQ, process, -1 * recievedProcess.t_running);
+                    }
+                else if (type == 2) // RR
+                    if (!canAllocate(recievedProcess.p_size)) {
+                        PriorityQueue__push(waiting_for_mem, process, -1 * recievedProcess.t_arrival);  // Ordering by arrival time == FIFO
+                    }
+                    else {
+                        process->mem_pair = allocate(recievedProcess.p_size);
+                        FIFOQueue__push(PQ, process);
+                    }
             }
         }
         return true;
@@ -170,14 +185,13 @@ void runProcess(void *Q, int type)
     run_clk = getClk();
     if (current_process->actual_pid == -1)
     {
-        if (canAllocate(current_process->p_data.p_size) == 1) {
-            printf("I can\n");
+        total_running += current_process->p_data.t_running;
+        if (type == 0 /*HPF*/) 
             current_process->mem_pair = allocate(current_process->p_data.p_size);
-            current_process->t_st = getClk();
-            current_process->actual_pid = createChild("./process.out", current_process->t_remaining, current_process->p_data.pid);
-            writeInLog(STARTED);
-            writeMemLog(memLog, current_process->t_st, current_process, 1 /*allocate*/);
-        }
+        current_process->t_st = getClk();
+        current_process->actual_pid = createChild("./process.out", current_process->t_remaining, current_process->p_data.pid);
+        writeInLog(STARTED);
+        writeMemLog(memLog, current_process->t_st, current_process, 1 /*allocate*/);
     }
     else
     {
@@ -202,8 +216,40 @@ void finishedProcess()
         PCB__destroy(current_process);
         current_process = NULL;
         p_end = true;
-        if (processNotFinished(Q, type))
+        if (processNotFinished(Q, type)) {
+            // Handle the processes waiting for memory if any
+            if (
+                !PriorityQueue__isEmpty(waiting_for_mem) &&
+                canAllocate(((PCB*)PriorityQueue__peek(waiting_for_mem))->p_data.p_size)
+            ) {
+                PCB* p = PriorityQueue__peek(waiting_for_mem);
+                if (type == 1 /*SRTN*/) {
+                    // If it's better so let it go
+                    if (p->p_data.t_running < ((PCB*)PriorityQueue__peek(Q))->t_remaining) {
+                        PriorityQueue__pop(waiting_for_mem);
+                        p->mem_pair = allocate(p->p_data.p_size);
+                        PriorityQueue__push(Q, p, -1 * p->p_data.t_running);
+                    }
+                }
+                if (type == 2 /*RR*/) {
+                    PriorityQueue__pop(waiting_for_mem);
+                    p->mem_pair = allocate(p->p_data.p_size);
+                    FIFOQueue__push(Q, p);
+                }
+            }
             runProcess(Q, type);
+        } else if (!PriorityQueue__isEmpty(waiting_for_mem)) {
+            PCB* p = PriorityQueue__pop(waiting_for_mem);
+            if (type == 1 /*SRTN*/) {
+                p->mem_pair = allocate(p->p_data.p_size);
+                PriorityQueue__push(Q, p, -1 * p->p_data.t_running);
+            }
+            if (type == 2 /*RR*/) {
+                p->mem_pair = allocate(p->p_data.p_size);
+                FIFOQueue__push(Q, p);
+            }
+            runProcess(Q, type);
+        }
     }
 }
 void STRN(PriorityQueue *Q)
@@ -268,6 +314,9 @@ void writeInLog(int state)
 }
 void intials()
 {
+    // Init inmem q
+    waiting_for_mem = PriorityQueue__create(10000);
+    
     // Init memory
     initMem();
     schedulerLog = openFile("scheduler.log", "w");

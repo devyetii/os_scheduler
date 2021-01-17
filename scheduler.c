@@ -238,9 +238,10 @@ void premtive(void *Q)
 ///////////////////////////write in files functions //////////////////////////
 void writeInPerf(int lclk)
 {
+    printf("Last clock passed %d\n", lclk);
     closeFile(schedulerLog);
     FILE *schedulerPerf = openFile("scheduler.perf", "w");
-    float utilization = ((float)(total_running + 1) / lclk) * 100.0;
+    float utilization = ((float)(total_running) / lclk) * 100.0;
     float average_w = (float)total_t_w / number_process;
     float average_WTA = (float)total_t_WTA / number_process;
     float sum = 0;

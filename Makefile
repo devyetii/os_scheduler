@@ -7,7 +7,6 @@ build:
 
 clean:
 	ipcrm -a
-	pkill -f clk.out
 	rm -f *.out
 
 all: clean build

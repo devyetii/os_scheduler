@@ -149,6 +149,7 @@ bool insert_in_Queue(void *PQ)
                         !canAllocate(recievedProcess.p_size) || /* Cannot be allocated in memory */
                         (current_process != NULL) && ((current_process->t_remaining - 1) < recievedProcess.t_running) /* NOT Better than the running process */
                     ) {
+                        printf("Process %d will wait \n", recievedProcess.pid);
                         PriorityQueue__push(waiting_for_mem, process, -1 * recievedProcess.t_running);
                     }
                     else {
@@ -157,6 +158,7 @@ bool insert_in_Queue(void *PQ)
                     }
                 else if (type == 2) // RR
                     if (!canAllocate(recievedProcess.p_size)) {
+                        printf("Process %d will wait \n", recievedProcess.pid);
                         PriorityQueue__push(waiting_for_mem, process, -1 * recievedProcess.t_arrival);  // Ordering by arrival time == FIFO
                     }
                     else {
@@ -297,7 +299,7 @@ void writeInPerf(int lclk)
     closeFile(schedulerLog);
     closeFile(memLog);
     FILE *schedulerPerf = openFile("scheduler.perf", "w");
-    float utilization = ((float)(total_running + 1) / lclk) * 100.0;
+    float utilization = ((float)(total_running) / lclk) * 100.0;
     float average_w = (float)total_t_w / number_process;
     float average_WTA = (float)total_t_WTA / number_process;
     float sum = 0;

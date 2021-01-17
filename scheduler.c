@@ -53,6 +53,10 @@ int main(int argc, char *argv[])
                 old_clk = current_clk;
                 if (run && type == 1 && processNotFinished(Q, type))
                     STRN(Q);
+                if(type == 2 && run)
+                {
+                    finishedProcess();
+                }    
                 if (run && type == 2 && current_clk == run_clk + quantam && current_process->t_remaining != 0)
                 {
                     if (!processNotFinished(Q, type))
@@ -175,6 +179,7 @@ void runProcess(void *Q, int type)
     else
     {
         setRemainingTime(current_process->t_remaining);
+
         change_child++;
         current_process->state = RESUMED;
         kill(current_process->actual_pid, SIGCONT);
@@ -185,9 +190,10 @@ void runProcess(void *Q, int type)
 
 void finishedProcess()
 {
-    run = false;
-    if (current_process != NULL)
+    if ((current_process != NULL)&&(current_process->t_remaining<=0)||(type!=2))
     {
+    run = false;
+
         writeInLogTerminate();
         printf("Process %d real %d finished at %d\n", current_process->p_data.pid, current_process->actual_pid, getClk());
         PCB__destroy(current_process);

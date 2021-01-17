@@ -6,6 +6,7 @@ build:
 	gcc test_generator.c -o test_generator.out -lm
 
 clean:
+	ipcrm -a
 	rm -f *.out
 
 all: clean build

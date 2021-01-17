@@ -287,6 +287,7 @@ void premtive(void *Q)
 ///////////////////////////write in files functions //////////////////////////
 void writeInPerf(int lclk)
 {
+    printf("Last clock passed %d\n", lclk);
     closeFile(schedulerLog);
     closeFile(memLog);
     FILE *schedulerPerf = openFile("scheduler.perf", "w");

@@ -217,12 +217,6 @@ The following enhancements are planned to make this simulator more comprehensive
 
 ---
 
-## Author
-
-[Ebrahim Gomaa](https://github.com/devyetii)
-
----
-
 ## License
 
 Provided for educational and academic purposes.
